@@ -228,57 +228,57 @@
     <span id="status-text">Đang khởi động...</span>
   </div>
   <div id="thread-info" style="margin-top:4px;">—</div>
-  <div id="user-info">UID: —</div>
+  <div id="user-info">ID người dùng: —</div>
 </div>
 
 <div class="section" id="load-section">
   <h2>📥 Tải tin nhắn (cả 2 người)</h2>
   <div class="row">
-    <label title="Tải tin từ ngày này đến hiện tại. Bỏ trống = tải max 500 batch.">
-      Đến ngày: <input type="date" id="lo-from" />
+    <label title="Tải các tin nhắn từ ngày này đến hiện tại. Bỏ trống = tải tối đa 500 lượt.">
+      Tải đến ngày: <input type="date" id="lo-from" />
     </label>
-    <label>Size: <input type="number" id="lo-size" value="50" min="5" max="100" step="5" style="width:50px;" /></label>
-    <label>Delay batch: <input type="number" id="lo-delay" value="200" min="0" max="5000" step="50" style="width:60px;" />ms</label>
+    <label title="Số tin nhắn mỗi lượt tải">Mỗi lượt: <input type="number" id="lo-size" value="50" min="5" max="100" step="5" style="width:50px;" /> tin nhắn</label>
+    <label title="Nghỉ giữa các lượt để tránh bị Facebook giới hạn">Nghỉ: <input type="number" id="lo-delay" value="200" min="0" max="5000" step="50" style="width:60px;" /> mili giây</label>
   </div>
   <div class="row">
-    <button id="lo-start" class="primary">🔽 Tải</button>
+    <button id="lo-start" class="primary">🔽 Bắt đầu tải</button>
     <button id="lo-stop" disabled>⏹ Dừng</button>
-    <button id="btn-refresh" title="Reload từ LSDatabase">🔄 Refresh DB</button>
-    <button id="btn-clear-extra" title="Xoá tin extra đã tải, giải phóng RAM">🗑 Xoá extras</button>
+    <button id="btn-refresh" title="Tải lại từ bộ nhớ có sẵn của Messenger">🔄 Tải lại</button>
+    <button id="btn-clear-extra" title="Xoá các tin đã tải thêm, giải phóng bộ nhớ">🗑 Xoá tin đã tải</button>
   </div>
   <div class="progress"><div class="progress-bar" id="lo-bar"></div></div>
   <div class="lo-status">
-    Trạng thái: <b id="lo-state">Idle</b> ·
-    Batch: <b id="lo-batch">0</b> ·
-    Tải thêm: <b id="lo-count">0</b> ·
-    Cũ nhất: <b id="lo-oldest">—</b>
+    Trạng thái: <b id="lo-state">Sẵn sàng</b> ·
+    Lượt: <b id="lo-batch">0</b> ·
+    Đã tải thêm: <b id="lo-count">0</b> ·
+    Tin cũ nhất: <b id="lo-oldest">—</b>
   </div>
 </div>
 
 <div class="section">
-  <h2>🔍 Filter</h2>
+  <h2>🔍 Lọc tin nhắn</h2>
   <div class="filter-grid">
     <div class="row">
-      <label><input type="checkbox" id="f-onlymine" /> Chỉ tin của tôi</label>
-      <label><input type="checkbox" id="f-hideunsent" checked /> Ẩn đã thu hồi</label>
-      <label><input type="checkbox" id="f-hideadmin" checked /> Ẩn hệ thống</label>
+      <label><input type="checkbox" id="f-onlymine" /> Chỉ tin nhắn của tôi</label>
+      <label><input type="checkbox" id="f-hideunsent" checked /> Ẩn tin nhắn đã thu hồi</label>
+      <label><input type="checkbox" id="f-hideadmin" checked /> Ẩn tin nhắn hệ thống</label>
     </div>
     <div class="row">
-      <input type="text" id="f-search" placeholder="Tìm trong text..." />
+      <input type="text" id="f-search" placeholder="Tìm trong nội dung tin nhắn..." />
     </div>
     <div class="row">
-      <label>Từ: <input type="date" id="f-from" /></label>
+      <label>Từ ngày: <input type="date" id="f-from" /></label>
       <label>đến: <input type="date" id="f-to" /></label>
     </div>
   </div>
 </div>
 
 <div id="list-header" class="msg-row" style="background:#161b22; font-weight:600; color:#8b949e; flex-shrink:0; border-bottom:1px solid #30363d;">
-  <input type="checkbox" id="check-all" title="Chọn tất cả tin của mình (đang hiển thị)" />
-  <div id="sort-time" style="cursor:pointer; user-select:none;" title="Click đổi sort">Time ↓</div>
-  <div>Sender</div>
-  <div>Text</div>
-  <div style="text-align:right;">⚐</div>
+  <input type="checkbox" id="check-all" title="Chọn tất cả tin nhắn của tôi (đang hiển thị)" />
+  <div id="sort-time" style="cursor:pointer; user-select:none;" title="Bấm để đổi thứ tự sắp xếp">Thời gian ↓</div>
+  <div>Người gửi</div>
+  <div>Nội dung</div>
+  <div style="text-align:right;">Loại</div>
 </div>
 <div id="list-wrapper">
   <div id="list"></div>
@@ -286,26 +286,26 @@
 
 <div id="action-bar">
   <div class="summary">
-    Tổng: <b id="sum-total">0</b> ·
-    Của tôi: <b id="sum-mine">0</b> ·
-    DB: <b id="sum-db">0</b> ·
-    Extra: <b id="sum-extra">0</b> ·
-    <span class="sel">Chọn: <b id="sum-sel">0</b></span>
+    Tổng số: <b id="sum-total">0</b> ·
+    Tin nhắn của tôi: <b id="sum-mine">0</b> ·
+    Có sẵn: <b id="sum-db">0</b> ·
+    Tải thêm: <b id="sum-extra">0</b> ·
+    <span class="sel">Đã chọn: <b id="sum-sel">0</b></span>
   </div>
   <div class="progress" style="display:none;" id="rv-progress"><div class="progress-bar danger" id="rv-bar"></div></div>
   <div class="row">
-    <label title="Delay random giữa min-max ms. Phải min < max.">
-      Delay: <input type="number" id="dlmin" value="1000" min="0" max="60000" step="100" style="width:60px;" />–
-      <input type="number" id="dlmax" value="1500" min="0" max="60000" step="100" style="width:60px;" />ms
+    <label title="Mỗi lần thu hồi xong sẽ nghỉ một khoảng ngẫu nhiên giữa hai giá trị này (phải nhỏ hơn lớn)">
+      Nghỉ giữa các lần thu hồi: <input type="number" id="dlmin" value="1000" min="0" max="60000" step="100" style="width:60px;" />–
+      <input type="number" id="dlmax" value="1500" min="0" max="60000" step="100" style="width:60px;" /> mili giây
     </label>
   </div>
   <div class="row">
-    <button id="btn-rv-sel" class="danger" disabled>🗑 Gỡ đã chọn</button>
-    <button id="btn-rv-range" class="danger" disabled title="Gỡ từ tin đã chọn đầu tiên đến tin đã chọn cuối cùng (kể cả không tick các tin ở giữa)">🗑 Gỡ range</button>
-    <button id="btn-rv-stop" disabled>⏹ Stop</button>
-    <button id="btn-export-pdf" title="Xuất tin đang hiển thị (sau filter) ra PDF dạng chat">📄 Xuất PDF</button>
-    <button id="btn-export-json" title="Xuất tin đang hiển thị ra JSON">📋 Xuất JSON</button>
-    <button id="btn-stats" title="Thống kê chat">📊 Thống kê</button>
+    <button id="btn-rv-sel" class="danger" disabled>🗑 Thu hồi tin nhắn đã chọn</button>
+    <button id="btn-rv-range" class="danger" disabled title="Thu hồi từ tin nhắn đã chọn đầu tiên đến tin nhắn đã chọn cuối cùng, bao gồm cả các tin nhắn ở giữa chưa tick">🗑 Thu hồi 1 đoạn</button>
+    <button id="btn-rv-stop" disabled>⏹ Dừng</button>
+    <button id="btn-export-pdf" title="Xuất các tin nhắn đang hiển thị ra file PDF dạng chat">📄 Xuất PDF</button>
+    <button id="btn-export-json" title="Xuất các tin nhắn đang hiển thị ra file JSON">📋 Xuất JSON</button>
+    <button id="btn-stats" title="Xem thống kê cuộc trò chuyện">📊 Thống kê</button>
   </div>
 </div>
 

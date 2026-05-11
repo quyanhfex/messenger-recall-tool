@@ -5,6 +5,20 @@
 > ⚡ Bypasses the 100-message client cache. Decrypts CDN images. Exports PDF.
 > 🧪 **For personal & educational research only.**
 
+<p align="center">
+  <img src="media/giaodien.jpg" alt="Panel UI" width="420">
+</p>
+
+---
+
+## 🎥 Demo
+
+| Desktop | Mobile |
+|---|---|
+| [▶ demopc.mp4](media/demopc.mp4) | [▶ demomobile.mp4](media/demomobile.mp4) |
+
+> GitHub does not autoplay `.mp4` inline. Click to download/play.
+
 ---
 
 ## ⚠️ Disclaimer
@@ -68,12 +82,6 @@ If you are a Meta employee and would like this taken down, please open an issue 
 - **Bulk recall** calls `MAWBridgeSendAndReceive.sendAndReceive('backend', 'sendRevokeMsg', { msgId: { author: '@me', chat, externalId }, ... })` directly, bypassing the React UI.
 
 Full notes are inline comments in [`injector.js`](messenger-recall/injector.js).
-
----
-
-## 📷 Screenshots
-
-> *(Add screenshots/GIFs here)*
 
 ---
 

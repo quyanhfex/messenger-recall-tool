@@ -155,7 +155,7 @@ function updateStatusUI(status) {
   $threadInfo.textContent = status.threadKey
     ? (status.threadName || 'Thread') + '  ·  ' + status.threadKey
     : 'Chưa mở thread cụ thể';
-  $userInfo.textContent = 'UID: ' + (status.myId || '?') + '  ·  Plaintext cache: ' + status.plaintextCacheSize;
+  $userInfo.textContent = 'ID người dùng: ' + (status.myId || '?') + '  ·  Đã giải mã: ' + status.plaintextCacheSize + ' tin nhắn';
 }
 
 // ============================================================
@@ -344,11 +344,11 @@ function renderList() {
       text.textContent = '[đã thu hồi]';
     } else if (m.isAdmin) {
       text.classList.add('unsent');
-      text.textContent = '[tin hệ thống]';
+      text.textContent = '[tin nhắn hệ thống]';
     } else if (m.text === '[ảnh]') {
       text.classList.add('media-link');
-      text.textContent = '🖼️ [ảnh] — click xem';
-      text.title = 'Click để xem ảnh';
+      text.textContent = '🖼️ [ảnh] — bấm để xem';
+      text.title = 'Bấm để xem ảnh';
       text.addEventListener('click', (e) => {
         e.stopPropagation();
         openMediaPreview(m);
@@ -361,7 +361,7 @@ function renderList() {
       text.textContent = m.text;
     } else {
       text.classList.add('empty');
-      text.textContent = '[không decode được]';
+      text.textContent = '[không giải mã được]';
     }
     if (!revokable && !m.isUnsent && !m.isMine) text.classList.add('notmine');
     row.appendChild(text);
@@ -377,7 +377,7 @@ function renderList() {
       const btn = document.createElement('button');
       btn.className = 'revoke-btn';
       btn.textContent = '🗑';
-      btn.title = 'Thu hồi tin này';
+      btn.title = 'Thu hồi tin nhắn này';
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         revokeSingle(m);
@@ -432,7 +432,7 @@ function updateSummary(filtered) {
 // ============================================================
 async function refreshAll() {
   const st = await rpc('status');
-  if (!st.ok) { logLine('Status fail: ' + st.error, 'err'); updateStatusUI(null); return; }
+  if (!st.ok) { logLine('Không kết nối được: ' + st.error, 'err'); updateStatusUI(null); return; }
   updateStatusUI(st.result);
 
   if (!st.result.storeReady || !st.result.threadKey) return;
@@ -441,7 +441,7 @@ async function refreshAll() {
     rpc('getAllMessages'),
     rpc('refreshPlaintextCache'),
   ]);
-  if (!msgsResp.ok) { logLine('getAllMessages fail: ' + msgsResp.error, 'err'); return; }
+  if (!msgsResp.ok) { logLine('Không lấy được tin nhắn: ' + msgsResp.error, 'err'); return; }
 
   const plain = pcResp.ok ? new Map(pcResp.result.entries) : new Map();
 
@@ -547,7 +547,7 @@ async function loadExtrasFromStorage() {
       return;
     }
     for (const e of entry.items) mergeMsg(extraToItem(e));
-    logLine(`Loaded ${entry.items.length} extras từ storage`, 'info');
+    logLine(`Đã tải lại ${entry.items.length} tin nhắn từ bộ nhớ`, 'info');
     renderList();
   } catch (e) {
     console.warn('loadExtras fail', e);
@@ -555,7 +555,7 @@ async function loadExtrasFromStorage() {
 }
 
 async function clearExtras() {
-  if (!confirm('Xoá toàn bộ tin extra đã tải của thread này? (Tin trong DB vẫn giữ)')) return;
+  if (!confirm('Xoá toàn bộ tin nhắn đã tải thêm của cuộc trò chuyện này? (Tin nhắn có sẵn vẫn giữ)')) return;
   for (const [k, m] of [...allMessages.entries()]) {
     if (m.source === 'extra' && m.threadKeyStr === currentThreadKey) {
       allMessages.delete(k);
@@ -598,7 +598,7 @@ async function startLoad() {
   loNewestTs = 0;
   loSetRunning(true);
 
-  logLine(`📥 Tải tin (đến ${$loFrom.value || 'no limit'})`, 'info');
+  logLine(`📥 Bắt đầu tải tin nhắn (đến ngày ${$loFrom.value || 'không giới hạn'})`, 'info');
   const resp = await rpc('loadOlderMessages', { fromDate, maxBatches: 500, batchSize, delayMs, requestId });
   loSetRunning(false);
   loActiveRequestId = null;
@@ -606,12 +606,12 @@ async function startLoad() {
   if (resp.ok) {
     const total = resp.result.totalFetched;
     const aborted = resp.result.aborted;
-    $loState.textContent = aborted ? `Đã dừng (${total} tin)` : `✅ Hoàn thành (${total} tin)`;
-    logLine(aborted ? `⏹ Dừng. Tải ${total} tin.` : `✅ Tải xong ${total} tin.`, aborted ? 'info' : 'ok');
+    $loState.textContent = aborted ? `Đã dừng (${total} tin nhắn)` : `✅ Hoàn thành (${total} tin nhắn)`;
+    logLine(aborted ? `⏹ Đã dừng. Tải được ${total} tin nhắn.` : `✅ Tải xong ${total} tin nhắn.`, aborted ? 'info' : 'ok');
     saveExtrasToStorage();
   } else {
     $loState.textContent = '❌ Lỗi: ' + resp.error;
-    logLine('❌ Load fail: ' + resp.error, 'err');
+    logLine('❌ Tải thất bại: ' + resp.error, 'err');
   }
 }
 
@@ -631,7 +631,7 @@ el('btn-clear-extra').addEventListener('click', clearExtras);
 // ============================================================
 async function revokeSingle(m) {
   if (!canRevoke(m)) return;
-  if (!confirm(`Thu hồi tin lúc ${fmtTime(m.timestampMs)}?\n\n"${m.text || '[không decode được]'}"`)) return;
+  if (!confirm(`Thu hồi tin nhắn lúc ${fmtTime(m.timestampMs)}?\n\n"${m.text || '[không giải mã được]'}"`)) return;
   logLine(`Thu hồi: ${m.messageId.slice(-12)}`, 'info');
   const resp = await revokeByItem(m);
   if (resp.ok && resp.result && (resp.result.success !== false)) {
@@ -670,9 +670,9 @@ async function revokeBulk(items) {
   if (!delay) return;
 
   if (items.length >= 20) {
-    if (!confirm(`Bạn sắp thu hồi ${items.length} tin.\nHành động KHÔNG thể hoàn tác.\n\nDelay: ${delay.lo}-${delay.hi}ms\n\nTiếp tục?`)) return;
+    if (!confirm(`Bạn sắp thu hồi ${items.length} tin nhắn.\nHành động KHÔNG thể hoàn tác.\n\nNghỉ giữa các lần: ${delay.lo}-${delay.hi} mili giây\n\nTiếp tục?`)) return;
   } else if (items.length > 1) {
-    if (!confirm(`Thu hồi ${items.length} tin? (delay ${delay.lo}-${delay.hi}ms)`)) return;
+    if (!confirm(`Thu hồi ${items.length} tin nhắn? (nghỉ ${delay.lo}-${delay.hi} mili giây)`)) return;
   }
 
   rvRunning = true;
@@ -685,7 +685,7 @@ async function revokeBulk(items) {
 
   let ok = 0, fail = 0;
   for (let i = 0; i < items.length; i++) {
-    if (rvAbort) { logLine('⏹ Đã dừng bulk revoke', 'info'); break; }
+    if (rvAbort) { logLine('⏹ Đã dừng thu hồi hàng loạt', 'info'); break; }
     const m = items[i];
     const resp = await revokeByItem(m);
     if (resp.ok && resp.result && (resp.result.success !== false)) {
@@ -709,7 +709,7 @@ async function revokeBulk(items) {
   rvRunning = false;
   $btnRvStop.disabled = true;
   $rvProgress.style.display = 'none';
-  logLine(`Bulk xong: ✅ ${ok}, ❌ ${fail}`, fail ? 'err' : 'ok');
+  logLine(`Thu hồi hàng loạt xong: ✅ ${ok}, ❌ ${fail}`, fail ? 'err' : 'ok');
   saveExtrasToStorage();
   updateSummary([]);
 }
@@ -806,12 +806,12 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ============================================================
 async function exportPDF() {
   const items = applyFilter();
-  if (!items.length) { alert('Không có tin nào để xuất'); return; }
+  if (!items.length) { alert('Không có tin nhắn nào để xuất'); return; }
 
   // Sort cũ → mới cho PDF
   items.sort((a, b) => a.timestampMs - b.timestampMs);
 
-  logLine(`📄 Đang xuất ${items.length} tin ra PDF...`, 'info');
+  logLine(`📄 Đang xuất ${items.length} tin nhắn ra PDF...`, 'info');
 
   // 1. Lấy contacts (name + avatar) cho mọi sender unique
   const senderIds = [...new Set(items.map((m) => m.senderIdStr).filter(Boolean))];
@@ -901,7 +901,7 @@ function buildExportHTML(opts) {
     if (m.isUnsent) {
       bodyContent = `<span class="meta">[đã thu hồi]</span>`;
     } else if (m.isAdmin) {
-      bodyContent = `<span class="meta">[tin hệ thống]</span>`;
+      bodyContent = `<span class="meta">[tin nhắn hệ thống]</span>`;
     } else if (isCallEvent(m)) {
       bodyContent = `<span class="meta">📞 ${escapeHTML(m.text)}</span>`;
     } else if (m.text === '[ảnh]' && imageCache[m.messageId]) {
@@ -911,7 +911,7 @@ function buildExportHTML(opts) {
     } else if (m.text) {
       bodyContent = escapeHTML(m.text).replace(/\n/g, '<br>');
     } else {
-      bodyContent = `<span class="meta">[không decode được]</span>`;
+      bodyContent = `<span class="meta">[không giải mã được]</span>`;
     }
 
     body += `
@@ -1009,7 +1009,7 @@ function buildExportHTML(opts) {
     <b>Bạn:</b> ${escapeHTML(myName)} (${escapeHTML(myId)})<br>
     <b>Đối phương:</b> ${escapeHTML(peerNames || '—')}<br>
     <b>Thread:</b> ${escapeHTML(threadKey)}<br>
-    <b>Tổng tin:</b> ${items.length}<br>
+    <b>Tổng số tin nhắn:</b> ${items.length}<br>
     <b>Xuất lúc:</b> ${escapeHTML(exportTime)}
   </div>
 </div>
@@ -1024,7 +1024,7 @@ el('btn-export-pdf').addEventListener('click', exportPDF);
 // ============================================================
 async function exportJSON() {
   const items = applyFilter();
-  if (!items.length) { alert('Không có tin nào để xuất'); return; }
+  if (!items.length) { alert('Không có tin nhắn nào để xuất'); return; }
   items.sort((a, b) => a.timestampMs - b.timestampMs);
 
   // Lấy contacts để gắn name
@@ -1094,7 +1094,7 @@ async function exportJSON() {
           else resolve(id);
         });
       });
-      logLine(`✅ Đã xuất ${items.length} tin → ${filename}`, 'ok');
+      logLine(`✅ Đã xuất ${items.length} tin nhắn → ${filename}`, 'ok');
       return;
     } catch (e) {
       logLine('chrome.downloads fail, fallback: ' + e.message, 'err');
@@ -1111,7 +1111,7 @@ async function exportJSON() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 30000);
-  logLine(`✅ Đã xuất ${items.length} tin → ${filename}`, 'ok');
+  logLine(`✅ Đã xuất ${items.length} tin nhắn → ${filename}`, 'ok');
 }
 
 el('btn-export-json').addEventListener('click', exportJSON);
@@ -1237,7 +1237,7 @@ function renderStats() {
     <div class="stat-section">
       <h3>Tổng quan</h3>
       <div class="stat-grid">
-        <div>Tổng tin: <b>${s.total}</b></div>
+        <div>Tổng số tin nhắn: <b>${s.total}</b></div>
         <div>Khoảng: <b>${s.daySpan} ngày</b></div>
         <div>Của bạn: <b>${s.mineCount}</b> (${minePct}%)</div>
         <div>Của đối phương: <b>${s.peersCount}</b> (${peersPct}%)</div>
@@ -1301,7 +1301,7 @@ let modalCurrent = null;
 
 async function openMediaPreview(m) {
   if (!m.threadIdAtMsgr || !m.externalId) {
-    logLine('Thiếu thông tin tin để tải media', 'err');
+    logLine('Thiếu thông tin tin nhắn để tải media', 'err');
     return;
   }
   modalCurrent = null;
@@ -1313,7 +1313,7 @@ async function openMediaPreview(m) {
   $modalInfo.textContent = '';
   $modalDownload.disabled = true;
 
-  $modalLoading.textContent = 'Đang tải / decrypt ảnh...';
+  $modalLoading.textContent = 'Đang tải và giải mã ảnh...';
   const resp = await rpc('getMediaForMessage', {
     threadIdAtMsgr: m.threadIdAtMsgr,
     externalId: m.externalId,
