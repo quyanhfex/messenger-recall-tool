@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Messenger Recall Tool",
+  "version": "1.0",
+  "description": "Thu hồi hàng loạt tin nhắn Messenger E2EE — filter, batch, search",
+  "permissions": ["sidePanel", "tabs", "scripting", "storage", "downloads"],
+  "host_permissions": [
+    "https://www.facebook.com/*",
+    "https://*.facebook.com/*",
+    "https://*.fbcdn.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.facebook.com/*", "https://*.facebook.com/*"],
+      "js": ["injector.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.facebook.com/*", "https://*.facebook.com/*"],
+      "js": ["content_script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "Messenger Recall Tool"
+  }
+}

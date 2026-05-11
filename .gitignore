@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs / captures (chứa data cá nhân nếu lỡ copy vào)
+*.log
+log*.txt
+*.tmp
+network_capture_*/
+wss-*.json
+extracted-*.jpg
+extracted-*.png
+
+# Build / package
+node_modules/
+dist/
+*.zip
+*.crx
+
+# Backup
+*.bak
+*.backup
