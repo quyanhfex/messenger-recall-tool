@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Messenger Recall</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #0d1117; color: #c9d1d9; font-size: 12px;
+    height: 100vh; display: flex; flex-direction: column;
+  }
+  .section {
+    border-bottom: 1px solid #21262d; padding: 8px 10px; flex-shrink: 0;
+  }
+  .section h2 {
+    font-size: 11px; color: #58a6ff; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;
+  }
+  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
+  .row label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 4px; }
+  button {
+    font-size: 11px; padding: 4px 10px; border: 1px solid #30363d;
+    border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #30363d; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: #238636; border-color: #238636; color: #fff; }
+  button.primary:hover:not(:disabled) { background: #2ea043; }
+  button.danger { background: #da3633; border-color: #da3633; color: #fff; }
+  button.danger:hover:not(:disabled) { background: #f85149; }
+  input[type="text"], input[type="date"], input[type="number"] {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 4px;
+    color: #c9d1d9; padding: 3px 6px; font-size: 11px;
+    font-family: inherit;
+  }
+  input[type="text"] { flex: 1; }
+
+  /* Header */
+  #header { background: #161b22; }
+  #status-line { display: flex; gap: 8px; align-items: center; font-size: 11px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #6e7681;
+  }
+  .status-dot.ok { background: #3fb950; }
+  .status-dot.warn { background: #d29922; }
+  .status-dot.error { background: #f85149; }
+  #thread-info { color: #58a6ff; font-weight: 500; }
+  #user-info { color: #8b949e; font-size: 10px; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
+    font-size: 11px; color: #8b949e;
+  }
+  .stats-grid b { color: #c9d1d9; font-weight: 600; }
+
+  /* Progress bar */
+  .progress {
+    height: 5px; background: #161b22; border-radius: 3px; overflow: hidden;
+    margin: 4px 0;
+  }
+  .progress-bar {
+    height: 100%; background: #58a6ff; width: 0%; transition: width 0.2s ease;
+  }
+  .progress-bar.danger { background: #f85149; }
+
+  /* List */
+  #list-wrapper { flex: 1; overflow-y: auto; }
+  .date-divider {
+    background: #161b22; color: #8b949e; font-size: 10px;
+    padding: 3px 10px; font-weight: 600; text-transform: uppercase;
+    border-bottom: 1px solid #21262d; position: sticky; top: 0; z-index: 1;
+  }
+  .msg-row {
+    display: grid;
+    grid-template-columns: 20px 60px 70px 1fr 38px;
+    gap: 6px; padding: 4px 10px; align-items: center;
+    border-bottom: 1px solid #161b22;
+    font-size: 11px;
+  }
+  .msg-row:hover { background: #161b22; }
+  .msg-row.selected { background: #1c2128; }
+  .msg-row.range-anchor { background: #1f6feb33; }
+  .msg-row .time { color: #8b949e; font-size: 10px; }
+  .msg-row .sender { color: #c9d1d9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .msg-row .sender.me { color: #58a6ff; }
+  .msg-row .text {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: #c9d1d9;
+  }
+  .msg-row .text.unsent { color: #6e7681; font-style: italic; }
+  .msg-row .text.empty { color: #6e7681; font-style: italic; }
+  .msg-row .text.notmine { color: #8b949e; }
+  .msg-row .flag {
+    font-size: 10px; text-align: right; color: #6e7681;
+    display: flex; gap: 2px; justify-content: flex-end; align-items: center;
+  }
+  .msg-row .flag .src.db { color: #3fb950; }
+  .msg-row .flag .src.extra { color: #58a6ff; }
+  .msg-row .flag .revoke-btn {
+    background: transparent; border: none; padding: 0;
+    color: #f85149; cursor: pointer; font-size: 11px;
+  }
+  .msg-row .flag .revoke-btn:hover { color: #ff7b72; }
+  .msg-row .flag .revoke-btn:disabled { color: #30363d; cursor: not-allowed; }
+  .msg-row input[type="checkbox"] { cursor: pointer; }
+  .msg-row.norevoke input[type="checkbox"] { visibility: hidden; }
+
+  /* Filter */
+  .filter-grid { display: grid; gap: 4px; }
+  .filter-grid label { cursor: pointer; }
+
+  /* Action bar */
+  #action-bar {
+    background: #161b22; padding: 8px 10px;
+    border-top: 1px solid #30363d;
+  }
+  #action-bar .summary {
+    font-size: 11px; color: #8b949e; margin-bottom: 5px;
+  }
+  #action-bar .summary b { color: #c9d1d9; }
+  #action-bar .summary .sel { color: #58a6ff; }
+
+  /* Log */
+  #log {
+    background: #010409; max-height: 100px; overflow-y: auto;
+    font-family: 'Consolas', monospace; font-size: 10px; line-height: 1.4;
+    padding: 6px 10px; color: #8b949e;
+  }
+  #log .ok { color: #3fb950; }
+  #log .err { color: #f85149; }
+  #log .info { color: #58a6ff; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0d1117; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+  /* Banner */
+  #banner {
+    background: #f85149; color: #fff; padding: 8px 10px;
+    font-size: 11px; text-align: center; display: none;
+  }
+  #banner.show { display: block; }
+  #banner.warn { background: #d29922; }
+
+  /* Load section */
+  #load-section { background: #0d1117; }
+  #load-section .lo-status { font-size: 11px; color: #8b949e; }
+  #load-section .lo-status b { color: #c9d1d9; }
+
+  /* Media preview modal */
+  #modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 999; flex-direction: column; padding: 20px;
+  }
+  #modal-bg.show { display: flex; }
+  #modal-bg img {
+    max-width: 90vw; max-height: 80vh; border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  #modal-bg .modal-actions {
+    margin-top: 12px; display: flex; gap: 8px;
+  }
+  #modal-bg .modal-actions button { padding: 6px 14px; font-size: 12px; }
+  #modal-bg .modal-info {
+    color: #8b949e; font-size: 11px; margin-top: 6px;
+  }
+  #modal-bg .modal-loading {
+    color: #c9d1d9; font-size: 12px;
+  }
+
+  .text.media-link {
+    color: #58a6ff; cursor: pointer; text-decoration: underline dotted;
+  }
+  .text.media-link:hover { color: #79c0ff; }
+
+  /* Stats modal */
+  #stats-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: flex-start; justify-content: center;
+    z-index: 999; padding: 20px; overflow-y: auto;
+  }
+  #stats-bg.show { display: flex; }
+  #stats-box {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    padding: 20px; max-width: 600px; width: 100%; color: #c9d1d9;
+    font-size: 12px;
+  }
+  #stats-box h2 {
+    color: #58a6ff; font-size: 14px; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  #stats-box .stat-section { margin-bottom: 18px; }
+  #stats-box .stat-section h3 {
+    color: #c9d1d9; font-size: 12px; margin-bottom: 6px; font-weight: 600;
+  }
+  #stats-box .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px;
+  }
+  #stats-box .stat-grid b { color: #58a6ff; }
+  #stats-box .bar-row {
+    display: grid; grid-template-columns: 50px 1fr 60px; gap: 6px;
+    align-items: center; margin-bottom: 2px; font-size: 10px;
+  }
+  #stats-box .bar-track {
+    height: 8px; background: #0d1117; border-radius: 4px; overflow: hidden;
+  }
+  #stats-box .bar-fill {
+    height: 100%; background: #58a6ff;
+  }
+  #stats-box .bar-fill.peer { background: #f85149; }
+  #stats-box .close-btn {
+    float: right; background: transparent; border: none; color: #8b949e;
+    cursor: pointer; font-size: 16px; padding: 0;
+  }
+  #stats-box .close-btn:hover { color: #f85149; }
+</style>
+</head>
+<body>
+
+<div id="banner"></div>
+
+<div id="header" class="section">
+  <div id="status-line">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text">Đang khởi động...</span>
+  </div>
+  <div id="thread-info" style="margin-top:4px;">—</div>
+  <div id="user-info">ID người dùng: —</div>
+</div>
+
+<div class="section" id="load-section">
+  <h2>📥 Tải tin nhắn (cả 2 người)</h2>
+  <div class="row">
+    <label title="Tải các tin nhắn từ ngày này đến hiện tại. Bỏ trống = tải tối đa 500 lượt.">
+      Tải đến ngày: <input type="date" id="lo-from" />
+    </label>
+    <label title="Số tin nhắn mỗi lượt tải">Mỗi lượt: <input type="number" id="lo-size" value="50" min="5" max="100" step="5" style="width:50px;" /> tin nhắn</label>
+    <label title="Nghỉ giữa các lượt để tránh bị Facebook giới hạn">Nghỉ: <input type="number" id="lo-delay" value="200" min="0" max="5000" step="50" style="width:60px;" /> mili giây</label>
+  </div>
+  <div class="row">
+    <button id="lo-start" class="primary">🔽 Bắt đầu tải</button>
+    <button id="lo-stop" disabled>⏹ Dừng</button>
+    <button id="btn-refresh" title="Tải lại từ bộ nhớ có sẵn của Messenger">🔄 Tải lại</button>
+    <button id="btn-clear-extra" title="Xoá các tin đã tải thêm, giải phóng bộ nhớ">🗑 Xoá tin đã tải</button>
+  </div>
+  <div class="progress"><div class="progress-bar" id="lo-bar"></div></div>
+  <div class="lo-status">
+    Trạng thái: <b id="lo-state">Sẵn sàng</b> ·
+    Lượt: <b id="lo-batch">0</b> ·
+    Đã tải thêm: <b id="lo-count">0</b> ·
+    Tin cũ nhất: <b id="lo-oldest">—</b>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🔍 Lọc tin nhắn</h2>
+  <div class="filter-grid">
+    <div class="row">
+      <label><input type="checkbox" id="f-onlymine" /> Chỉ tin nhắn của tôi</label>
+      <label><input type="checkbox" id="f-hideunsent" checked /> Ẩn tin nhắn đã thu hồi</label>
+      <label><input type="checkbox" id="f-hideadmin" checked /> Ẩn tin nhắn hệ thống</label>
+    </div>
+    <div class="row">
+      <input type="text" id="f-search" placeholder="Tìm trong nội dung tin nhắn..." />
+    </div>
+    <div class="row">
+      <label>Từ ngày: <input type="date" id="f-from" /></label>
+      <label>đến: <input type="date" id="f-to" /></label>
+    </div>
+  </div>
+</div>
+
+<div id="list-header" class="msg-row" style="background:#161b22; font-weight:600; color:#8b949e; flex-shrink:0; border-bottom:1px solid #30363d;">
+  <input type="checkbox" id="check-all" title="Chọn tất cả tin nhắn của tôi (đang hiển thị)" />
+  <div id="sort-time" style="cursor:pointer; user-select:none;" title="Bấm để đổi thứ tự sắp xếp">Thời gian ↓</div>
+  <div>Người gửi</div>
+  <div>Nội dung</div>
+  <div style="text-align:right;">Loại</div>
+</div>
+<div id="list-wrapper">
+  <div id="list"></div>
+</div>
+
+<div id="action-bar">
+  <div class="summary">
+    Tổng số: <b id="sum-total">0</b> ·
+    Tin nhắn của tôi: <b id="sum-mine">0</b> ·
+    Có sẵn: <b id="sum-db">0</b> ·
+    Tải thêm: <b id="sum-extra">0</b> ·
+    <span class="sel">Đã chọn: <b id="sum-sel">0</b></span>
+  </div>
+  <div class="progress" style="display:none;" id="rv-progress"><div class="progress-bar danger" id="rv-bar"></div></div>
+  <div class="row">
+    <label title="Mỗi lần thu hồi xong sẽ nghỉ một khoảng ngẫu nhiên giữa hai giá trị này (phải nhỏ hơn lớn)">
+      Nghỉ giữa các lần thu hồi: <input type="number" id="dlmin" value="1000" min="0" max="60000" step="100" style="width:60px;" />–
+      <input type="number" id="dlmax" value="1500" min="0" max="60000" step="100" style="width:60px;" /> mili giây
+    </label>
+  </div>
+  <div class="row">
+    <button id="btn-rv-sel" class="danger" disabled>🗑 Thu hồi tin nhắn đã chọn</button>
+    <button id="btn-rv-range" class="danger" disabled title="Thu hồi từ tin nhắn đã chọn đầu tiên đến tin nhắn đã chọn cuối cùng, bao gồm cả các tin nhắn ở giữa chưa tick">🗑 Thu hồi 1 đoạn</button>
+    <button id="btn-rv-stop" disabled>⏹ Dừng</button>
+    <button id="btn-export-pdf" title="Xuất các tin nhắn đang hiển thị ra file PDF dạng chat">📄 Xuất PDF</button>
+    <button id="btn-export-json" title="Xuất các tin nhắn đang hiển thị ra file JSON">📋 Xuất JSON</button>
+    <button id="btn-stats" title="Xem thống kê cuộc trò chuyện">📊 Thống kê</button>
+  </div>
+</div>
+
+<div id="log"></div>
+
+<div id="modal-bg">
+  <div class="modal-loading" id="modal-loading">Đang tải ảnh...</div>
+  <img id="modal-img" style="display:none" alt="" />
+  <div class="modal-info" id="modal-info"></div>
+  <div class="modal-actions">
+    <button id="modal-download" class="primary" disabled>💾 Tải về</button>
+    <button id="modal-close">✕ Đóng</button>
+  </div>
+</div>
+
+<div id="stats-bg">
+  <div id="stats-box">
+    <button class="close-btn" id="stats-close">✕</button>
+    <h2>📊 Thống kê thread</h2>
+    <div id="stats-content"></div>
+  </div>
+</div>
+
+<script src="panel.js"></script>
+</body>
+</html>

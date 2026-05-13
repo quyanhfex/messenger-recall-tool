@@ -1,0 +1,46 @@
+== Facebook E2EE PIN & Device Identity ==
+
+Facebook định danh "thiết bị mới" bằng một non-extractable CryptoKey lưu trong IndexedDB.
+
+Database: recovery_code_v1_100092675494108
+Store: _worm_ear_
+Record: { clientKey: CryptoKey (non-extractable), salt: CryptoKey (non-extractable), keyHash, expiration, version }
+
+- clientKey và salt là Web Crypto API CryptoKey với extractable=false
+- Khi serialize ra JSON hiện {} vì browser không cho export raw bytes
+- Key này được tạo lần đầu khi nhập PIN, tied to browser profile (không phải OS keystore)
+- Nằm trong Chromium profile directory trên disk → persist qua restart
+- Chrome không hỏi PIN lại sau khi đóng/mở lại vì key vẫn còn trong profile
+
+Kết luận:
+- Không thể copy CryptoKey sang browser khác (non-extractable)
+- Không thể bypass bằng cách inject IndexedDB keys
+- Cách duy nhất: dùng cùng Chromium profile directory
+
+Giải pháp cho server (Playwright):
+- Dùng chromium.launchPersistentContext('./playwright-profile') thay vì chromium.launch()
+- Lần đầu: nhập PIN một lần, profile được lưu vào disk
+- Lần sau: load cùng profile → CryptoKey còn đó → không hỏi PIN
+- Lên VPS: copy thư mục playwright-profile/ lên là xong
+
+== Signal Keys ==
+
+IndexedDB: messenger_web_signal_v3_100092675494108
+Stores: session, identity, prekey, signedPrekey, meta, senderKeySessions, personalSenderKeyStatuses
+
+- Tất cả records đều có _encryptedContent: {} khi đọc ra JSON
+- PIN chỉ decrypt in-memory, không bao giờ lưu plaintext ra disk
+- Export sau khi nhập PIN vẫn ra encrypted vì CryptoKey non-extractable giữ key decrypt
+
+== Bridge API ==
+
+window.require('MAWBridgeSendAndReceive').sendAndReceive('mps', 'mpsLoadMessages', {
+  direction: 'desc',
+  from: [Date.now() + 86400000, '0'],
+  numMessages: 20,
+  threadId: '<userId>@msgr',
+})
+
+- threadId format: '<userId>@msgr' (không phải thread ID số)
+- Có thể fetch bất kỳ thread E2EE nào mà không cần navigate đến thread đó
+- Payload decode qua extractTextFromPayload() — 100% decode rate trên 250 messages test

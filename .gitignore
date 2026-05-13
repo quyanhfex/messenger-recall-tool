@@ -1,0 +1,5 @@
+server/cookies.json
+server/signal_keys.json
+server/signal_keys_decrypted.json
+server/playwright-profile/
+node_modules/
