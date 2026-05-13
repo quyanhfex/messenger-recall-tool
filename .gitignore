@@ -3,3 +3,21 @@ server/signal_keys.json
 server/signal_keys_decrypted.json
 server/playwright-profile/
 node_modules/
+dist/
+*.zip
+*.crx
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+log*.txt
+*.tmp
