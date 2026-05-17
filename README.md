@@ -1,112 +1,180 @@
-# 💬 Messenger Recall Tool
+# Messenger Recall Tool
 
-> A Chrome side-panel extension for **archiving, searching, exporting and managing** your own Facebook Messenger conversations — including E2EE threads.
->
-> ⚡ Bypasses the 100-message client cache. Decrypts CDN images. Exports PDF.
-> 🧪 **For personal & educational research only.**
+Chrome extension (side panel) to read, search, export and bulk-recall Facebook Messenger E2EE messages — including history beyond the 100-message client cache.
+
+**For your own account only. Personal research purposes.**
 
 <p align="center">
   <img src="media/giaodien.jpg" alt="Panel UI" width="420">
 </p>
 
----
-
-## 🎥 Demo
+## Demo
 
 | Desktop | Mobile |
 |---|---|
-| [▶ demopc.mp4](media/demopc.mp4) | [▶ demomobile.mp4](media/demomobile.mp4) |
-
-> GitHub does not autoplay `.mp4` inline. Click to download/play.
+| [demopc.mp4](media/demopc.mp4) | [demomobile.mp4](media/demomobile.mp4) |
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
-This project is **independent research**. It is **not affiliated with, endorsed by, or sponsored by Meta Platforms, Inc., Facebook, WhatsApp, or any related entity**.
+Independent project, not affiliated with Meta / Facebook.
 
-- Use **at your own risk** and **on your own account only**.
-- Using this tool may violate Facebook's [Terms of Service](https://www.facebook.com/legal/terms). You alone are responsible for any consequences (rate limits, account flags, suspension).
-- Provided **AS-IS**, with **no warranty**. See [LICENSE](LICENSE).
-- The author does not condone using this tool to harass, stalk, deceive, or harm anyone. **Don't be a jerk.**
-
-If you are a Meta employee and would like this taken down, please open an issue first — happy to discuss.
+- Use on your own account. You are solely responsible for any consequences (rate limits, account flags, suspension).
+- Do not use to harass, stalk, or harm anyone.
+- Provided AS-IS. See [LICENSE](LICENSE).
 
 ---
 
-## ✨ What it does
+## Features
 
-| Feature | Description |
+| Tab | Description |
 |---|---|
-| 📥 **Load history beyond cache** | Messenger only keeps ~100 recent messages locally. This tool paginates the internal bridge API to load months/years of history into memory. |
-| 🔍 **Search & filter** | Full-text search across all loaded messages. Filter by date range, sender, status (unsent, system), keyword. |
-| 🖼️ **Image preview & download** | Detects embedded JPEG/PNG and CDN-encrypted images (`.enc`). Decrypts CDN images using the message's mediaKey via HKDF-SHA256 + AES-256-CBC. |
-| 📞 **Call event detection** | Parses inline call protobufs — shows `[cuộc gọi nhỡ 0:03]`, `[video call 1:23]` etc. with type & duration. |
-| 📄 **Export as PDF** | Renders selected messages as a Messenger-style chat page (bubbles, avatars, date dividers) and opens in a new tab → print → save as PDF. |
-| 📋 **Export as JSON** | Structured dump with participants, names, timestamps, message types — for further processing. |
-| 📊 **Statistics dashboard** | Total messages, you vs them %, by hour-of-day chart, by month chart, media count, total call duration. |
-| 🗑️ **Bulk recall** | Select messages (or shift-click range) → recall via E2EE protocol. Random delay between requests (anti-rate-limit). |
-| 💾 **Persistent extras** | Fetched extras saved per-thread to `chrome.storage.local` (TTL 7 days). |
+| **Load** | Paginates `mpsLoadMessages` bridge API to fetch history beyond the 100-message cache. Configurable start date, batch size, and delay. |
+| **View** | Full-text search, filter by date / sender / status (unsent, system messages). Shift-click range selection. |
+| **Recall** | Bulk-recall selected messages via E2EE protocol. Random delay between requests to avoid rate-limiting. |
+| **Export** | Export as PDF (chat-style with avatars and images) or raw JSON. Statistics by hour, month, sender, call duration. |
+| **Chat** | Send messages directly from the side panel via bridge API. |
+| **AI** | Auto-reply: uses an OpenAI-compatible API to automatically reply to incoming messages. Configurable system prompt, model, delay, context size. |
+
+Additional:
+- Inline image viewer and download (JPEG/PNG/GIF/WebP) + CDN `.enc` image decryption (HKDF-SHA256 + AES-256-CBC)
+- Call event detection from protobuf payload: `[missed call 0:03]`, `[video call 1:23]`
+- Per-thread extras cached in `chrome.storage.local` (7-day TTL)
 
 ---
 
-## 🚀 Install
+## Install
 
 1. `git clone https://github.com/quyanhfex/messenger-recall-tool.git`
 2. Open `chrome://extensions/` → enable **Developer mode** (top right)
-3. Click **Load unpacked** → select the cloned folder
-4. Pin the extension; open Messenger; click the extension icon to open the side panel
+3. **Load unpacked** → select the cloned folder
+4. Pin the extension → open Messenger → click the icon to open the side panel
 
-> **No Chrome Web Store version.** This will probably stay unpacked-only.
+Not available on the Chrome Web Store.
 
 ---
 
-## 🔧 How it works (high level)
+## How it works
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Chrome Side Panel  ←  RPC  →  Content Script  ←  RPC  →   │
-│  (panel.html/js)                (content_script.js)         │
-│                                       ↓ window.postMessage  │
-│                                       ↓                     │
-│            MAIN world injector (injector.js)                │
-│                ↓                                            │
-│       window.require('MAWBridgeSendAndReceive')             │
-│                ↓                                            │
-│       MAW Worker  →  Facebook backend  →  E2EE peers        │
-└─────────────────────────────────────────────────────────────┘
+Chrome Side Panel  ←  RPC  →  Content Script  ←  RPC  →
+(panel.html/js)              (content_script.js)
+                                    ↓ window.postMessage
+                       MAIN world injector (injector.js)
+                                    ↓
+                  window.require('MAWBridgeSendAndReceive')
+                                    ↓
+                  MAW Worker  →  Facebook backend  →  E2EE peers
 ```
 
-- **Walker** parses the toplevel protobuf payload from each `mpsLoadMessages` response without a `.proto` schema — looks at wire-format tags and decodes UTF-8 leaves heuristically.
-- **CDN image decryption** follows the WhatsApp media-key derivation (`HKDF salt=zeros, info="WhatsApp Image Keys"`) → AES-256-CBC.
-- **Bulk recall** calls `MAWBridgeSendAndReceive.sendAndReceive('backend', 'sendRevokeMsg', { msgId: { author: '@me', chat, externalId }, ... })` directly, bypassing the React UI.
-
-Full notes are inline comments in [`injector.js`](messenger-recall/injector.js).
-
----
-
-## ⚖️ License
-
-[MIT](LICENSE) — do what you want, but the disclaimer above stands.
+- `hook_injector.js` runs at `document_start` to install a fake `__REACT_DEVTOOLS_GLOBAL_HOOK__`, capturing React Fiber roots before React initializes.
+- `injector.js` walks the Fiber tree to get the LSDatabase store; parses protobuf payloads without a `.proto` schema — decodes UTF-8 leaves heuristically.
+- CDN image decryption uses WhatsApp media-key derivation: `HKDF(salt=zeros, info="WhatsApp Image Keys")` → AES-256-CBC.
+- Bulk recall calls `sendRevokeMsg` directly via the bridge, bypassing the React UI.
 
 ---
 
-## 🙏 Acknowledgements
-
-Inspired by [shoot-the-messenger](https://github.com/theahura/shoot-the-messenger) (DOM-based approach). This project explores the bridge-API route.
-
----
-
-## ❓ FAQ
+## FAQ
 
 **Q: Will my account get banned?**
-A: I don't know. I haven't been banned, but I'm a sample size of one. Lower the bulk-recall delay carefully.
+Haven't been banned, but sample size is 1. Set a higher recall delay to be safe.
 
-**Q: Why are some messages `[không decode được]`?**
-A: Probably an attachment type not yet handled (stickers, location share, reply quote, etc.). PRs welcome.
+**Q: Why do some messages show `[không decode được]`?**
+Attachment type not yet handled (stickers, location, reply quotes...). PRs welcome.
 
-**Q: Can it recall messages from missed calls / call events?**
-A: No. Facebook silently rejects revoke for call events server-side — verified empirically. The local DB will mark them `isUnsent: true`, but the peer never receives the revoke.
+**Q: Can it recall call event messages?**
+No. Facebook silently rejects revoke for call events server-side — the local DB marks them `isUnsent: true` but the peer never receives the revoke.
 
-**Q: Why so much Vietnamese in the UI?**
-A: Built for personal use first. PRs to add i18n welcome.
+---
+
+## License
+
+[MIT](LICENSE) — Inspired by [shoot-the-messenger](https://github.com/theahura/shoot-the-messenger) (DOM-based approach).
+
+---
+---
+
+# Messenger Recall Tool (Tiếng Việt)
+
+Chrome extension (side panel) để đọc, tìm kiếm, xuất và thu hồi hàng loạt tin nhắn Messenger E2EE — kể cả tin vượt giới hạn 100 tin của cache client.
+
+**Chỉ dùng cho tài khoản của chính bạn. Mục đích nghiên cứu cá nhân.**
+
+---
+
+## Disclaimer
+
+Dự án độc lập, không liên kết với Meta / Facebook.
+
+- Dùng trên tài khoản của bạn, tự chịu trách nhiệm nếu bị rate-limit hoặc khóa tài khoản.
+- Không dùng để quấy rối, theo dõi, hay gây hại người khác.
+- Provided AS-IS. See [LICENSE](LICENSE).
+
+---
+
+## Tính năng
+
+| Tab | Mô tả |
+|---|---|
+| **Tải** | Phân trang qua bridge API (`mpsLoadMessages`) để tải lịch sử vượt cache 100 tin. Cấu hình ngày bắt đầu, kích thước batch, delay giữa các lượt. |
+| **Xem** | Full-text search, lọc theo ngày / người gửi / trạng thái (đã thu hồi, tin hệ thống). Shift-click để chọn nhiều tin. |
+| **Thu hồi** | Thu hồi hàng loạt tin đã chọn qua E2EE protocol. Delay ngẫu nhiên giữa các lần để tránh rate-limit. |
+| **Xuất** | Xuất PDF (dạng chat có avatar, ảnh) hoặc JSON thô. Xem thống kê theo giờ, tháng, người gửi, thời lượng gọi. |
+| **Chat** | Gửi tin nhắn trực tiếp từ side panel qua bridge API. |
+| **AI** | Auto-reply: dùng AI (OpenAI-compatible API) tự động trả lời tin nhắn đến. Cấu hình system prompt, model, delay, context size. |
+
+Tính năng thêm:
+- Xem và tải ảnh inline (JPEG/PNG/GIF/WebP) + decrypt ảnh CDN `.enc` (HKDF-SHA256 + AES-256-CBC)
+- Nhận diện cuộc gọi từ protobuf payload: `[cuộc gọi nhỡ 0:03]`, `[video call 1:23]`
+- Cache extras per-thread vào `chrome.storage.local` (TTL 7 ngày)
+
+---
+
+## Cài đặt
+
+1. `git clone https://github.com/quyanhfex/messenger-recall-tool.git`
+2. Mở `chrome://extensions/` → bật **Developer mode** (góc trên phải)
+3. **Load unpacked** → chọn thư mục vừa clone
+4. Pin extension → mở Messenger → click icon để mở side panel
+
+Không có trên Chrome Web Store.
+
+---
+
+## Cách hoạt động
+
+```
+Chrome Side Panel  ←  RPC  →  Content Script  ←  RPC  →
+(panel.html/js)              (content_script.js)
+                                    ↓ window.postMessage
+                       MAIN world injector (injector.js)
+                                    ↓
+                  window.require('MAWBridgeSendAndReceive')
+                                    ↓
+                  MAW Worker  →  Facebook backend  →  E2EE peers
+```
+
+- `hook_injector.js` chạy ở `document_start` để cài fake `__REACT_DEVTOOLS_GLOBAL_HOOK__`, bắt React Fiber roots trước khi React khởi động.
+- `injector.js` walk Fiber tree để lấy LSDatabase store; parse protobuf payload không cần `.proto` schema — decode UTF-8 leaves heuristically.
+- CDN image decryption dùng WhatsApp media-key derivation: `HKDF(salt=zeros, info="WhatsApp Image Keys")` → AES-256-CBC.
+- Bulk recall gọi thẳng `sendRevokeMsg` qua bridge, không qua React UI.
+
+---
+
+## FAQ
+
+**Q: Có bị ban không?**
+Chưa bị, nhưng sample size là 1. Đặt delay thu hồi cao một chút cho an toàn.
+
+**Q: Một số tin hiện `[không decode được]` là sao?**
+Attachment chưa được xử lý (sticker, location, reply quote...). PR welcome.
+
+**Q: Thu hồi được tin nhắn cuộc gọi không?**
+Không. Facebook từ chối revoke call events phía server — local DB sẽ mark `isUnsent: true` nhưng phía kia không nhận được revoke.
+
+---
+
+## License
+
+[MIT](LICENSE) — Inspired by [shoot-the-messenger](https://github.com/theahura/shoot-the-messenger) (DOM-based approach).
