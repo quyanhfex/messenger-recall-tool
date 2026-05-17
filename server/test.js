@@ -8,9 +8,9 @@ const cookies = JSON.parse(readFileSync(join(__dirname, 'cookies.json'), 'utf-8'
 const injectorCode = readFileSync(join(__dirname, '../injector.js'), 'utf-8');
 const signalKeys = JSON.parse(readFileSync(join(__dirname, 'signal_keys_decrypted.json'), 'utf-8'));
 
-const THREAD_ID = '6517005051737194';
-const threadIdAtMsgr = '100093258271346@msgr';
-const DB_NAME = 'messenger_web_signal_v3_100092675494108';
+const THREAD_ID = 'YOUR_THREAD_ID';
+const threadIdAtMsgr = 'YOUR_USER_ID@msgr';
+const DB_NAME = 'messenger_web_signal_v3_YOUR_FB_UID';
 const PROFILE_DIR = join(__dirname, 'playwright-profile');
 const isFirstRun = !existsSync(join(PROFILE_DIR, 'Default', 'IndexedDB'));
 

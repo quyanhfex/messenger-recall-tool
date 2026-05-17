@@ -8,93 +8,161 @@
   body {
     font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
     background: #0d1117; color: #c9d1d9; font-size: 12px;
-    height: 100vh; display: flex; flex-direction: column;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
   }
-  .section {
-    border-bottom: 1px solid #21262d; padding: 8px 10px; flex-shrink: 0;
-  }
-  .section h2 {
-    font-size: 11px; color: #58a6ff; text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;
-  }
-  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
-  .row label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 4px; }
-  button {
-    font-size: 11px; padding: 4px 10px; border: 1px solid #30363d;
-    border-radius: 4px; background: #21262d; color: #c9d1d9; cursor: pointer;
-  }
-  button:hover:not(:disabled) { background: #30363d; }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  button.primary { background: #238636; border-color: #238636; color: #fff; }
-  button.primary:hover:not(:disabled) { background: #2ea043; }
-  button.danger { background: #da3633; border-color: #da3633; color: #fff; }
-  button.danger:hover:not(:disabled) { background: #f85149; }
-  input[type="text"], input[type="date"], input[type="number"] {
-    background: #0d1117; border: 1px solid #30363d; border-radius: 4px;
-    color: #c9d1d9; padding: 3px 6px; font-size: 11px;
-    font-family: inherit;
-  }
-  input[type="text"] { flex: 1; }
 
-  /* Header */
-  #header { background: #161b22; }
-  #status-line { display: flex; gap: 8px; align-items: center; font-size: 11px; }
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%; background: #6e7681;
+  /* ---- Header ---- */
+  #header {
+    background: #161b22; padding: 8px 12px; flex-shrink: 0;
+    border-bottom: 1px solid #30363d;
   }
+  #status-line { display: flex; gap: 8px; align-items: center; font-size: 11px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #6e7681; flex-shrink: 0; }
   .status-dot.ok { background: #3fb950; }
   .status-dot.warn { background: #d29922; }
   .status-dot.error { background: #f85149; }
-  #thread-info { color: #58a6ff; font-weight: 500; }
-  #user-info { color: #8b949e; font-size: 10px; }
-
-  /* Stats */
-  .stats-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
-    font-size: 11px; color: #8b949e;
+  #thread-info { color: #58a6ff; font-weight: 600; font-size: 12px; margin-top: 3px; }
+  #user-info { color: #6e7681; font-size: 10px; margin-top: 1px; display: flex; align-items: center; justify-content: space-between; }
+  #btn-header-refresh {
+    background: transparent; border: 1px solid #30363d; border-radius: 4px;
+    color: #8b949e; cursor: pointer; font-size: 11px; padding: 2px 8px;
+    transition: all 0.15s;
   }
-  .stats-grid b { color: #c9d1d9; font-weight: 600; }
+  #btn-header-refresh:hover { color: #c9d1d9; background: #21262d; border-color: #58a6ff; }
 
-  /* Progress bar */
+  /* ---- Banner ---- */
+  #banner {
+    background: #f85149; color: #fff; padding: 6px 12px;
+    font-size: 11px; text-align: center; display: none; flex-shrink: 0;
+  }
+  #banner.show { display: block; }
+  #banner.warn { background: #d29922; }
+
+  /* ---- Tabs ---- */
+  #tabs {
+    display: flex; background: #161b22; flex-shrink: 0;
+    border-bottom: 1px solid #30363d;
+  }
+  .tab-btn {
+    flex: 1; padding: 7px 4px; font-size: 11px; font-weight: 500;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: #8b949e; cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn:hover { color: #c9d1d9; background: #21262d; }
+  .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+  /* ---- Tab panels ---- */
+  #tab-panels { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .tab-panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .tab-panel.active { display: flex; }
+
+  /* ---- Common ---- */
+  .row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .row label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 4px; }
+  .section-body { padding: 10px 12px; flex-shrink: 0; }
+  .field-label { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; font-weight: 600; }
+
+  button {
+    font-size: 11px; padding: 5px 10px; border: 1px solid #30363d;
+    border-radius: 5px; background: #21262d; color: #c9d1d9; cursor: pointer;
+    transition: background 0.1s;
+  }
+  button:hover:not(:disabled) { background: #30363d; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: #238636; border-color: #2ea043; color: #fff; }
+  button.primary:hover:not(:disabled) { background: #2ea043; }
+  button.danger { background: #da3633; border-color: #b91c1c; color: #fff; }
+  button.danger:hover:not(:disabled) { background: #f85149; }
+  button.ghost { background: transparent; border-color: #30363d; }
+  button.ghost:hover:not(:disabled) { background: #21262d; }
+
+  input[type="text"], input[type="date"], input[type="number"] {
+    background: #0d1117; border: 1px solid #30363d; border-radius: 4px;
+    color: #c9d1d9; padding: 4px 7px; font-size: 11px; font-family: inherit;
+  }
+  input[type="text"] { flex: 1; }
+  input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus {
+    outline: none; border-color: #58a6ff;
+  }
+
+  /* ---- Progress ---- */
   .progress {
-    height: 5px; background: #161b22; border-radius: 3px; overflow: hidden;
-    margin: 4px 0;
+    height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; margin: 6px 0;
   }
-  .progress-bar {
-    height: 100%; background: #58a6ff; width: 0%; transition: width 0.2s ease;
-  }
+  .progress-bar { height: 100%; background: #58a6ff; width: 0%; transition: width 0.2s; }
   .progress-bar.danger { background: #f85149; }
 
-  /* List */
+  /* ---- Tab: Tải ---- */
+  #load-section { overflow-y: auto; }
+  .lo-status { font-size: 11px; color: #8b949e; line-height: 1.8; }
+  .lo-status b { color: #c9d1d9; }
+  .lo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .lo-field label { font-size: 10px; color: #6e7681; display: block; margin-bottom: 3px; }
+  .lo-field input { width: 100%; }
+
+  /* ---- Tab: Xem ---- */
+  #view-panel { overflow: hidden; }
+  #search-bar {
+    padding: 6px 10px; flex-shrink: 0; border-bottom: 1px solid #21262d;
+    display: flex; gap: 6px; align-items: center;
+  }
+  #search-bar input { flex: 1; }
+  #btn-filter {
+    background: transparent; border: 1px solid transparent; border-radius: 4px;
+    color: #6e7681; cursor: pointer; font-size: 14px; padding: 3px 5px; flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+  }
+  #btn-filter:hover { color: #c9d1d9; background: #21262d; }
+  #btn-filter.active { color: #58a6ff; border-color: #58a6ff33; background: #1f6feb22; }
+  #filter-dropdown {
+    display: none; flex-shrink: 0; flex-direction: column; gap: 0;
+    border-bottom: 1px solid #21262d; background: #0d1117;
+  }
+  #filter-dropdown.open { display: flex; }
+  #filter-row {
+    padding: 6px 12px;
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  }
+  #filter-row label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  #date-row {
+    padding: 4px 12px 8px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  #date-row label { font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 4px; }
+  #list-header {
+    display: grid; grid-template-columns: 20px 55px 70px 1fr 36px;
+    gap: 6px; padding: 5px 12px; background: #161b22;
+    font-size: 10px; color: #6e7681; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.3px; flex-shrink: 0; border-bottom: 1px solid #30363d;
+  }
   #list-wrapper { flex: 1; overflow-y: auto; }
+  #list {}
+
   .date-divider {
     background: #161b22; color: #8b949e; font-size: 10px;
-    padding: 3px 10px; font-weight: 600; text-transform: uppercase;
+    padding: 3px 12px; font-weight: 600; text-transform: uppercase;
     border-bottom: 1px solid #21262d; position: sticky; top: 0; z-index: 1;
+    letter-spacing: 0.3px;
   }
   .msg-row {
-    display: grid;
-    grid-template-columns: 20px 60px 70px 1fr 38px;
-    gap: 6px; padding: 4px 10px; align-items: center;
-    border-bottom: 1px solid #161b22;
-    font-size: 11px;
+    display: grid; grid-template-columns: 20px 55px 70px 1fr 36px;
+    gap: 6px; padding: 4px 12px; align-items: center;
+    border-bottom: 1px solid #161b22; font-size: 11px;
   }
   .msg-row:hover { background: #161b22; }
   .msg-row.selected { background: #1c2128; }
-  .msg-row.range-anchor { background: #1f6feb33; }
-  .msg-row .time { color: #8b949e; font-size: 10px; }
+  .msg-row.range-anchor { background: #1f6feb22; }
+  .msg-row .time { color: #6e7681; font-size: 10px; }
   .msg-row .sender { color: #c9d1d9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .msg-row .sender.me { color: #58a6ff; }
-  .msg-row .text {
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    color: #c9d1d9;
-  }
+  .msg-row .text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9d1d9; }
   .msg-row .text.unsent { color: #6e7681; font-style: italic; }
   .msg-row .text.empty { color: #6e7681; font-style: italic; }
   .msg-row .text.notmine { color: #8b949e; }
+  .msg-row .text.media-link { color: #58a6ff; cursor: pointer; text-decoration: underline dotted; }
+  .msg-row .text.media-link:hover { color: #79c0ff; }
   .msg-row .flag {
-    font-size: 10px; text-align: right; color: #6e7681;
-    display: flex; gap: 2px; justify-content: flex-end; align-items: center;
+    font-size: 10px; display: flex; gap: 2px; justify-content: flex-end; align-items: center; color: #6e7681;
   }
   .msg-row .flag .src.db { color: #3fb950; }
   .msg-row .flag .src.extra { color: #58a6ff; }
@@ -107,76 +175,67 @@
   .msg-row input[type="checkbox"] { cursor: pointer; }
   .msg-row.norevoke input[type="checkbox"] { visibility: hidden; }
 
-  /* Filter */
-  .filter-grid { display: grid; gap: 4px; }
-  .filter-grid label { cursor: pointer; }
-
-  /* Action bar */
-  #action-bar {
-    background: #161b22; padding: 8px 10px;
-    border-top: 1px solid #30363d;
+  /* ---- Summary bar ---- */
+  #summary-bar {
+    padding: 5px 12px; background: #161b22; flex-shrink: 0;
+    font-size: 11px; color: #8b949e; border-top: 1px solid #30363d;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
   }
-  #action-bar .summary {
-    font-size: 11px; color: #8b949e; margin-bottom: 5px;
-  }
-  #action-bar .summary b { color: #c9d1d9; }
-  #action-bar .summary .sel { color: #58a6ff; }
+  #summary-bar b { color: #c9d1d9; }
+  #summary-bar .sel { color: #58a6ff; }
 
-  /* Log */
+  /* ---- Tab: Thu hồi ---- */
+  #revoke-panel { overflow-y: auto; }
+  .rv-info { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 11px; color: #8b949e; line-height: 1.7; }
+  .rv-info b { color: #c9d1d9; }
+
+  /* ---- Tab: Xuất ---- */
+  #export-panel { overflow-y: auto; }
+  .export-card {
+    background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+    padding: 12px; margin-bottom: 8px;
+  }
+  .export-card h3 { font-size: 12px; color: #c9d1d9; margin-bottom: 4px; }
+  .export-card p { font-size: 11px; color: #8b949e; margin-bottom: 8px; line-height: 1.5; }
+
+  /* ---- Log ---- */
+  #log-toggle {
+    display: flex; align-items: center; gap: 6px;
+    background: #010409; border-top: 1px solid #21262d;
+    padding: 3px 12px; flex-shrink: 0; cursor: pointer;
+    font-size: 10px; color: #6e7681; user-select: none;
+  }
+  #log-toggle:hover { color: #8b949e; }
+  #log-toggle .arrow { font-size: 9px; transition: transform 0.15s; }
+  #log-toggle.open .arrow { transform: rotate(180deg); }
   #log {
-    background: #010409; max-height: 100px; overflow-y: auto;
-    font-family: 'Consolas', monospace; font-size: 10px; line-height: 1.4;
-    padding: 6px 10px; color: #8b949e;
+    background: #010409; height: 80px; overflow-y: auto; flex-shrink: 0;
+    font-family: 'Consolas', monospace; font-size: 10px; line-height: 1.5;
+    padding: 5px 12px; color: #8b949e;
+    display: none;
   }
+  #log.open { display: block; }
   #log .ok { color: #3fb950; }
   #log .err { color: #f85149; }
   #log .info { color: #58a6ff; }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: #0d1117; }
   ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
-  /* Banner */
-  #banner {
-    background: #f85149; color: #fff; padding: 8px 10px;
-    font-size: 11px; text-align: center; display: none;
-  }
-  #banner.show { display: block; }
-  #banner.warn { background: #d29922; }
-
-  /* Load section */
-  #load-section { background: #0d1117; }
-  #load-section .lo-status { font-size: 11px; color: #8b949e; }
-  #load-section .lo-status b { color: #c9d1d9; }
-
-  /* Media preview modal */
+  /* ---- Modals ---- */
   #modal-bg {
     position: fixed; inset: 0; background: rgba(0,0,0,0.85);
     display: none; align-items: center; justify-content: center;
     z-index: 999; flex-direction: column; padding: 20px;
   }
   #modal-bg.show { display: flex; }
-  #modal-bg img {
-    max-width: 90vw; max-height: 80vh; border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  }
-  #modal-bg .modal-actions {
-    margin-top: 12px; display: flex; gap: 8px;
-  }
+  #modal-bg img { max-width: 90vw; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+  #modal-bg .modal-actions { margin-top: 12px; display: flex; gap: 8px; }
   #modal-bg .modal-actions button { padding: 6px 14px; font-size: 12px; }
-  #modal-bg .modal-info {
-    color: #8b949e; font-size: 11px; margin-top: 6px;
-  }
-  #modal-bg .modal-loading {
-    color: #c9d1d9; font-size: 12px;
-  }
+  #modal-bg .modal-info { color: #8b949e; font-size: 11px; margin-top: 6px; }
+  #modal-bg .modal-loading { color: #c9d1d9; font-size: 12px; }
 
-  .text.media-link {
-    color: #58a6ff; cursor: pointer; text-decoration: underline dotted;
-  }
-  .text.media-link:hover { color: #79c0ff; }
-
-  /* Stats modal */
   #stats-bg {
     position: fixed; inset: 0; background: rgba(0,0,0,0.85);
     display: none; align-items: flex-start; justify-content: center;
@@ -185,132 +244,402 @@
   #stats-bg.show { display: flex; }
   #stats-box {
     background: #161b22; border: 1px solid #30363d; border-radius: 8px;
-    padding: 20px; max-width: 600px; width: 100%; color: #c9d1d9;
-    font-size: 12px;
+    padding: 20px; max-width: 600px; width: 100%; color: #c9d1d9; font-size: 12px;
   }
-  #stats-box h2 {
-    color: #58a6ff; font-size: 14px; margin-bottom: 12px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
+  #stats-box h2 { color: #58a6ff; font-size: 14px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
   #stats-box .stat-section { margin-bottom: 18px; }
-  #stats-box .stat-section h3 {
-    color: #c9d1d9; font-size: 12px; margin-bottom: 6px; font-weight: 600;
-  }
-  #stats-box .stat-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px;
-  }
+  #stats-box .stat-section h3 { color: #c9d1d9; font-size: 12px; margin-bottom: 6px; font-weight: 600; }
+  #stats-box .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px; }
   #stats-box .stat-grid b { color: #58a6ff; }
-  #stats-box .bar-row {
-    display: grid; grid-template-columns: 50px 1fr 60px; gap: 6px;
-    align-items: center; margin-bottom: 2px; font-size: 10px;
-  }
-  #stats-box .bar-track {
-    height: 8px; background: #0d1117; border-radius: 4px; overflow: hidden;
-  }
-  #stats-box .bar-fill {
-    height: 100%; background: #58a6ff;
-  }
+  #stats-box .bar-row { display: grid; grid-template-columns: 50px 1fr 60px; gap: 6px; align-items: center; margin-bottom: 2px; font-size: 10px; }
+  #stats-box .bar-track { height: 8px; background: #0d1117; border-radius: 4px; overflow: hidden; }
+  #stats-box .bar-fill { height: 100%; background: #58a6ff; }
   #stats-box .bar-fill.peer { background: #f85149; }
-  #stats-box .close-btn {
-    float: right; background: transparent; border: none; color: #8b949e;
-    cursor: pointer; font-size: 16px; padding: 0;
-  }
+  #stats-box .close-btn { float: right; background: transparent; border: none; color: #8b949e; cursor: pointer; font-size: 16px; padding: 0; }
   #stats-box .close-btn:hover { color: #f85149; }
+
+  /* ---- Thread picker dropdown ---- */
+  .tab-wrap { flex: 1; position: relative; }
+  .tab-wrap .tab-btn { width: 100%; }
+  .tab-dropdown {
+    display: none; position: absolute; top: 100%; left: 0;
+    min-width: 200px; padding-top: 4px;
+    z-index: 200;
+  }
+  .tab-dropdown-inner {
+    background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+    max-height: 260px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  .tab-wrap:hover .tab-dropdown,
+  .tab-dropdown:hover { display: block; }
+  .tab-dropdown-header {
+    padding: 7px 12px 5px; font-size: 10px; color: #6e7681;
+    text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    border-bottom: 1px solid #30363d;
+  }
+  .thread-item {
+    padding: 8px 12px; font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #21262d22; transition: background 0.1s;
+  }
+  .thread-item:last-child { border-bottom: none; }
+  .thread-item:hover { background: #21262d; }
+  .thread-item.active { background: #1f6feb22; border-left: 2px solid #58a6ff; }
+  .thread-item:not(.active) { border-left: 2px solid transparent; }
+  .ti-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: #30363d;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #8b949e; font-weight: 700; overflow: hidden;
+  }
+  .ti-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .ti-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .thread-item .ti-name { color: #c9d1d9; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread-item.active .ti-name { color: #58a6ff; }
+  .thread-item .ti-key { color: #6e7681; font-size: 10px; }
+  .thread-dropdown-empty { padding: 12px; font-size: 11px; color: #6e7681; text-align: center; }
+
+  /* ---- Tab: Chat ---- */
+  #chat-panel { overflow: hidden; }
+  #chat-peer-bar {
+    padding: 7px 12px; flex-shrink: 0; border-bottom: 1px solid #21262d;
+    font-size: 11px; color: #8b949e; display: flex; align-items: center; gap: 8px;
+  }
+  #chat-peer-bar .peer-name { color: #c9d1d9; font-weight: 600; }
+  #chat-peer-bar .peer-id { color: #6e7681; font-size: 10px; }
+  #chat-messages {
+    flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .chat-bubble-wrap { display: flex; flex-direction: column; max-width: 80%; gap: 2px; }
+  .chat-bubble-wrap.me { align-self: flex-end; align-items: flex-end; }
+  .chat-bubble-wrap.other { align-self: flex-start; align-items: flex-start; }
+  .chat-sender { font-size: 10px; color: #6e7681; padding: 0 8px; }
+  .chat-bubble {
+    padding: 6px 10px; border-radius: 14px; font-size: 12px;
+    word-wrap: break-word; max-width: 100%; line-height: 1.4;
+  }
+  .chat-bubble-wrap.me .chat-bubble { background: #1f6feb; color: #fff; }
+  .chat-bubble-wrap.other .chat-bubble { background: #21262d; color: #c9d1d9; }
+  .chat-bubble.pending { opacity: 0.6; font-style: italic; }
+  .chat-bubble.error { background: #da363322; border: 1px solid #da3633; color: #f85149; }
+  .chat-ts { font-size: 9px; color: #6e7681; padding: 0 8px; }
+  #chat-input-bar {
+    padding: 8px 10px; flex-shrink: 0; border-top: 1px solid #21262d;
+    display: flex; gap: 6px; align-items: flex-end;
+  }
+  #chat-input {
+    flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+    color: #c9d1d9; padding: 6px 10px; font-size: 12px; font-family: inherit;
+    resize: none; min-height: 32px; max-height: 80px; line-height: 1.4;
+    overflow-y: auto;
+  }
+  #chat-input:focus { outline: none; border-color: #58a6ff; }
+  #chat-send {
+    background: #1f6feb; border: none; border-radius: 8px; color: #fff;
+    padding: 6px 12px; font-size: 12px; cursor: pointer; flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  #chat-send:hover:not(:disabled) { background: #388bfd; }
+  #chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* ---- Tab: AI Auto-Reply ---- */
+  #ai-panel { overflow: hidden; }
+  .ai-header {
+    padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid #30363d;
+    background: #161b22; display: flex; align-items: center; gap: 8px;
+  }
+  .ai-toggle-btn {
+    padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    border: 1px solid #30363d; background: #21262d; color: #8b949e; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ai-toggle-btn.active { background: #da3633; border-color: #f85149; color: #fff; }
+  .ai-toggle-btn:hover { opacity: 0.85; }
+  .ai-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .ai-dot.off { background: #6e7681; }
+  .ai-dot.on { background: #3fb950; animation: ai-blink 2s ease-in-out infinite; }
+  .ai-dot.thinking { background: #d29922; animation: ai-blink 0.5s ease-in-out infinite; }
+  @keyframes ai-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  #ai-settings {
+    display: none; flex-shrink: 0; flex-direction: column; gap: 6px;
+    padding: 8px 12px; border-bottom: 1px solid #21262d; background: #0d1117;
+    max-height: 280px; overflow-y: auto;
+  }
+  #ai-settings.open { display: flex; }
+  #ai-settings label { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; margin-bottom: 2px; }
+  #ai-settings textarea {
+    background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+    color: #c9d1d9; padding: 6px 8px; font-size: 11px; font-family: inherit;
+    resize: vertical; min-height: 50px; max-height: 120px;
+  }
+  #ai-settings textarea:focus { outline: none; border-color: #8b5cf6; }
+  #ai-settings select, #ai-settings input[type="text"], #ai-settings input[type="password"], #ai-settings input[type="number"] {
+    background: #161b22; border: 1px solid #30363d; border-radius: 4px;
+    color: #c9d1d9; padding: 4px 7px; font-size: 11px; font-family: inherit; width: 100%;
+  }
+  #ai-settings select:focus, #ai-settings input:focus { outline: none; border-color: #8b5cf6; }
+  .ai-setting-row { display: flex; gap: 8px; }
+  .ai-setting-row > div { flex: 1; }
+  .ai-setting-row label { display: block; }
+  #ai-active-list {
+    flex-shrink: 0; max-height: 200px; overflow-y: auto;
+    border-bottom: 1px solid #21262d;
+  }
+  .ai-thread-card {
+    padding: 6px 12px; border-bottom: 1px solid #161b22;
+    transition: background 0.15s;
+  }
+  .ai-thread-card:hover { background: #161b22; }
+  .ai-tc-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; margin-bottom: 2px;
+  }
+  .ai-tc-name { color: #c9d1d9; font-weight: 600; }
+  .ai-tc-countdown { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .ai-tc-msg { font-size: 10px; color: #8b949e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .ai-tc-bar-track { height: 3px; background: #21262d; border-radius: 2px; overflow: hidden; }
+  .ai-tc-bar { height: 100%; border-radius: 2px; transition: width 1s linear; }
+  #ai-log {
+    flex: 1; overflow-y: auto; padding: 8px 12px;
+    font-size: 11px; color: #8b949e; line-height: 1.7;
+  }
+  .ai-log-line { border-bottom: 1px solid #21262d11; padding: 2px 0; }
+  .ai-log-ts { color: #6e7681; font-size: 10px; }
+  .ai-settings-bar {
+    padding: 4px 12px; flex-shrink: 0; border-bottom: 1px solid #21262d;
+    display: flex; gap: 6px; align-items: center;
+  }
 </style>
 </head>
 <body>
 
 <div id="banner"></div>
 
-<div id="header" class="section">
+<!-- Header -->
+<div id="header">
   <div id="status-line">
     <span class="status-dot" id="status-dot"></span>
     <span id="status-text">Đang khởi động...</span>
   </div>
-  <div id="thread-info" style="margin-top:4px;">—</div>
-  <div id="user-info">ID người dùng: —</div>
-</div>
-
-<div class="section" id="load-section">
-  <h2>📥 Tải tin nhắn (cả 2 người)</h2>
-  <div class="row">
-    <label title="Tải các tin nhắn từ ngày này đến hiện tại. Bỏ trống = tải tối đa 500 lượt.">
-      Tải đến ngày: <input type="date" id="lo-from" />
-    </label>
-    <label title="Số tin nhắn mỗi lượt tải">Mỗi lượt: <input type="number" id="lo-size" value="50" min="5" max="100" step="5" style="width:50px;" /> tin nhắn</label>
-    <label title="Nghỉ giữa các lượt để tránh bị Facebook giới hạn">Nghỉ: <input type="number" id="lo-delay" value="200" min="0" max="5000" step="50" style="width:60px;" /> mili giây</label>
-  </div>
-  <div class="row">
-    <button id="lo-start" class="primary">🔽 Bắt đầu tải</button>
-    <button id="lo-stop" disabled>⏹ Dừng</button>
-    <button id="btn-refresh" title="Tải lại từ bộ nhớ có sẵn của Messenger">🔄 Tải lại</button>
-    <button id="btn-clear-extra" title="Xoá các tin đã tải thêm, giải phóng bộ nhớ">🗑 Xoá tin đã tải</button>
-  </div>
-  <div class="progress"><div class="progress-bar" id="lo-bar"></div></div>
-  <div class="lo-status">
-    Trạng thái: <b id="lo-state">Sẵn sàng</b> ·
-    Lượt: <b id="lo-batch">0</b> ·
-    Đã tải thêm: <b id="lo-count">0</b> ·
-    Tin cũ nhất: <b id="lo-oldest">—</b>
+  <div id="thread-info">—</div>
+  <div id="user-info">
+    <span id="user-info-text">ID người dùng: —</span>
+    <button id="btn-header-refresh" title="Tải lại dữ liệu">🔄 Tải lại</button>
   </div>
 </div>
 
-<div class="section">
-  <h2>🔍 Lọc tin nhắn</h2>
-  <div class="filter-grid">
-    <div class="row">
-      <label><input type="checkbox" id="f-onlymine" /> Chỉ tin nhắn của tôi</label>
-      <label><input type="checkbox" id="f-hideunsent" checked /> Ẩn tin nhắn đã thu hồi</label>
-      <label><input type="checkbox" id="f-hideadmin" checked /> Ẩn tin nhắn hệ thống</label>
-    </div>
-    <div class="row">
-      <input type="text" id="f-search" placeholder="Tìm trong nội dung tin nhắn..." />
-    </div>
-    <div class="row">
-      <label>Từ ngày: <input type="date" id="f-from" /></label>
-      <label>đến: <input type="date" id="f-to" /></label>
+<!-- Tabs -->
+<div id="tabs">
+  <button class="tab-btn active" data-tab="load">📥 Tải</button>
+  <div class="tab-wrap" id="view-tab-wrap">
+    <button class="tab-btn" data-tab="view">💬 Xem</button>
+    <div class="tab-dropdown" id="view-thread-dropdown">
+      <div class="thread-dropdown-empty">Hover để chọn thread</div>
     </div>
   </div>
+  <button class="tab-btn" data-tab="revoke">🗑 Thu hồi</button>
+  <button class="tab-btn" data-tab="export">📤 Xuất</button>
+  <div class="tab-wrap" id="chat-tab-wrap">
+    <button class="tab-btn" data-tab="chat">✉ Chat</button>
+    <div class="tab-dropdown" id="chat-thread-dropdown">
+      <div class="thread-dropdown-empty">Hover để chọn thread</div>
+    </div>
+  </div>
+  <button class="tab-btn" data-tab="ai">🤖 AI</button>
 </div>
 
-<div id="list-header" class="msg-row" style="background:#161b22; font-weight:600; color:#8b949e; flex-shrink:0; border-bottom:1px solid #30363d;">
-  <input type="checkbox" id="check-all" title="Chọn tất cả tin nhắn của tôi (đang hiển thị)" />
-  <div id="sort-time" style="cursor:pointer; user-select:none;" title="Bấm để đổi thứ tự sắp xếp">Thời gian ↓</div>
-  <div>Người gửi</div>
-  <div>Nội dung</div>
-  <div style="text-align:right;">Loại</div>
-</div>
-<div id="list-wrapper">
-  <div id="list"></div>
+<div id="tab-panels">
+
+  <!-- Tab: Tải -->
+  <div class="tab-panel active" id="load-panel">
+    <div class="section-body" id="load-section">
+      <div class="lo-grid">
+        <div class="lo-field">
+          <label>Tải đến ngày</label>
+          <input type="date" id="lo-from" />
+        </div>
+        <div class="lo-field">
+          <label>Mỗi lượt (tin)</label>
+          <input type="number" id="lo-size" value="50" min="5" max="200" step="5" />
+        </div>
+        <div class="lo-field">
+          <label>Nghỉ giữa lượt (ms)</label>
+          <input type="number" id="lo-delay" value="200" min="0" max="5000" step="50" />
+        </div>
+      </div>
+      <div class="row">
+        <button id="lo-start" class="primary">🔽 Bắt đầu tải</button>
+        <button id="lo-stop" disabled>⏹ Dừng</button>
+        <button id="btn-refresh" class="ghost">🔄 Tải lại</button>
+        <button id="btn-clear-extra" class="ghost">🗑 Xoá đã tải</button>
+      </div>
+      <div class="progress"><div class="progress-bar" id="lo-bar"></div></div>
+      <div class="lo-status">
+        Trạng thái: <b id="lo-state">Sẵn sàng</b><br>
+        Lượt: <b id="lo-batch">0</b> · Đã tải thêm: <b id="lo-count">0</b> · Tin cũ nhất: <b id="lo-oldest">—</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Xem -->
+  <div class="tab-panel" id="view-panel">
+    <div id="search-bar">
+      <input type="text" id="f-search" placeholder="🔍 Tìm trong nội dung tin nhắn..." />
+      <button id="btn-view-refresh" title="Tải lại" style="background:transparent;border:1px solid transparent;border-radius:4px;color:#6e7681;cursor:pointer;font-size:14px;padding:3px 5px;flex-shrink:0;transition:color 0.15s,background 0.15s;">↻</button>
+      <button id="btn-filter" title="Bộ lọc">⚙</button>
+    </div>
+    <div id="filter-dropdown">
+      <div id="filter-row">
+        <label><input type="checkbox" id="f-onlymine" /> Chỉ của tôi</label>
+        <label><input type="checkbox" id="f-hideunsent" checked /> Ẩn đã thu hồi</label>
+        <label><input type="checkbox" id="f-hideadmin" checked /> Ẩn hệ thống</label>
+      </div>
+      <div id="date-row">
+        <label>Từ: <input type="date" id="f-from" /></label>
+        <label>Đến: <input type="date" id="f-to" /></label>
+      </div>
+    </div>
+    <div id="list-header">
+      <input type="checkbox" id="check-all" title="Chọn tất cả" />
+      <div id="sort-time" style="cursor:pointer; user-select:none;" title="Đổi thứ tự sắp xếp">Giờ ↓</div>
+      <div>Người gửi</div>
+      <div>Nội dung</div>
+      <div style="text-align:right;">Loại</div>
+    </div>
+    <div id="list-wrapper">
+      <div id="list"></div>
+    </div>
+    <div id="summary-bar">
+      Tổng: <b id="sum-total">0</b> ·
+      Của tôi: <b id="sum-mine">0</b> ·
+      Có sẵn: <b id="sum-db">0</b> ·
+      Tải thêm: <b id="sum-extra">0</b> ·
+      <span class="sel">Đã chọn: <b id="sum-sel">0</b></span>
+    </div>
+  </div>
+
+  <!-- Tab: Thu hồi -->
+  <div class="tab-panel" id="revoke-panel">
+    <div class="section-body">
+      <div class="rv-info">
+        Tổng: <b id="rv-sum-total">—</b> · Của tôi: <b id="rv-sum-mine">—</b> · Đã chọn: <b id="rv-sum-sel">—</b>
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <label style="font-size:11px; color:#8b949e;">Nghỉ giữa các lần (ms):</label>
+        <input type="number" id="dlmin" value="1000" min="0" max="60000" step="100" style="width:65px;" />
+        <span style="color:#6e7681;">–</span>
+        <input type="number" id="dlmax" value="1500" min="0" max="60000" step="100" style="width:65px;" />
+      </div>
+      <div class="progress" style="display:none;" id="rv-progress"><div class="progress-bar danger" id="rv-bar"></div></div>
+      <div class="row">
+        <button id="btn-rv-sel" class="danger" disabled>🗑 Thu hồi đã chọn</button>
+        <button id="btn-rv-range" class="danger" disabled title="Thu hồi từ tin đầu đến tin cuối đã chọn">🗑 Thu hồi 1 đoạn</button>
+        <button id="btn-rv-stop" disabled>⏹ Dừng</button>
+      </div>
+      <p style="font-size:10px; color:#6e7681; margin-top:8px;">Chọn tin nhắn ở tab Xem trước, rồi quay lại đây để thu hồi.</p>
+    </div>
+  </div>
+
+  <!-- Tab: Xuất -->
+  <div class="tab-panel" id="export-panel">
+    <div class="section-body">
+      <div class="export-card">
+        <h3>📄 Xuất PDF</h3>
+        <p>Xuất các tin nhắn đang hiển thị ra file PDF dạng chat có avatar và ảnh.</p>
+        <button id="btn-export-pdf" class="primary">📄 Xuất PDF</button>
+      </div>
+      <div class="export-card">
+        <h3>📋 Xuất JSON</h3>
+        <p>Xuất dữ liệu thô dạng JSON, phù hợp để xử lý bằng code.</p>
+        <button id="btn-export-json">📋 Xuất JSON</button>
+      </div>
+      <div class="export-card">
+        <h3>📊 Thống kê</h3>
+        <p>Xem biểu đồ theo giờ, tháng, người gửi, số ảnh và thời lượng gọi.</p>
+        <button id="btn-stats">📊 Xem thống kê</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Chat -->
+  <div class="tab-panel" id="chat-panel">
+    <div id="chat-peer-bar">
+      <span>Đang nhắn với:</span>
+      <span class="peer-name" id="chat-peer-name">—</span>
+      <span class="peer-id" id="chat-peer-id"></span>
+      <button id="btn-chat-refresh" style="margin-left:auto; font-size:10px; padding:3px 7px;">↻</button>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-bar">
+      <textarea id="chat-input" rows="1" placeholder="Nhập tin nhắn..."></textarea>
+      <button id="chat-send" disabled>Gửi</button>
+    </div>
+  </div>
+
+  <!-- Tab: AI Auto-Reply -->
+  <div class="tab-panel" id="ai-panel">
+    <div class="ai-header">
+      <button id="ai-toggle" class="ai-toggle-btn">▶ BẬT</button>
+      <span id="ai-toggle-label" style="font-size:11px;color:#8b949e;">Đã tắt</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+        <span class="ai-dot off" id="ai-status-dot"></span>
+        <span id="ai-status-text" style="font-size:10px;color:#8b949e;">Không hoạt động</span>
+      </span>
+    </div>
+    <div class="ai-settings-bar">
+      <button id="ai-toggle-settings" style="font-size:11px; padding:3px 10px;">⚙ Cài đặt</button>
+    </div>
+    <div id="ai-settings">
+      <div>
+        <label>System Prompt (AI đóng vai bạn)</label>
+        <textarea id="ai-system-prompt" rows="3">Bạn là tôi, hãy trả lời tin nhắn thay tôi. Trả lời ngắn gọn, tự nhiên, thân thiện như đang nhắn tin với bạn bè. Dùng tiếng Việt. Không cần giải thích dài dòng.</textarea>
+      </div>
+      <div class="ai-setting-row">
+        <div>
+          <label>Model</label>
+          <select id="ai-model"></select>
+        </div>
+        <div>
+          <label>Max Tokens</label>
+          <input type="number" id="ai-max-tokens" value="512" min="50" max="4096" step="50" />
+        </div>
+      </div>
+      <div class="ai-setting-row">
+        <div style="flex:2">
+          <label>API Key</label>
+          <input type="password" id="ai-api-key" value="" />
+        </div>
+        <div style="flex:1">
+          <label>Temp: <span id="ai-temp-val">0.7</span></label>
+          <input type="range" id="ai-temp" min="0" max="2" step="0.1" value="0.7" style="width:100%;accent-color:#8b5cf6;" />
+        </div>
+      </div>
+      <div class="ai-setting-row">
+        <div>
+          <label>Thời gian chờ (giây)</label>
+          <input type="number" id="ai-delay" value="30" min="5" max="300" step="5" />
+        </div>
+        <div>
+          <label>Context (số tin)</label>
+          <input type="number" id="ai-context-size" value="10" min="3" max="30" step="1" />
+        </div>
+      </div>
+    </div>
+    <div id="ai-active-list"></div>
+    <div id="ai-log"></div>
+  </div>
+
 </div>
 
-<div id="action-bar">
-  <div class="summary">
-    Tổng số: <b id="sum-total">0</b> ·
-    Tin nhắn của tôi: <b id="sum-mine">0</b> ·
-    Có sẵn: <b id="sum-db">0</b> ·
-    Tải thêm: <b id="sum-extra">0</b> ·
-    <span class="sel">Đã chọn: <b id="sum-sel">0</b></span>
-  </div>
-  <div class="progress" style="display:none;" id="rv-progress"><div class="progress-bar danger" id="rv-bar"></div></div>
-  <div class="row">
-    <label title="Mỗi lần thu hồi xong sẽ nghỉ một khoảng ngẫu nhiên giữa hai giá trị này (phải nhỏ hơn lớn)">
-      Nghỉ giữa các lần thu hồi: <input type="number" id="dlmin" value="1000" min="0" max="60000" step="100" style="width:60px;" />–
-      <input type="number" id="dlmax" value="1500" min="0" max="60000" step="100" style="width:60px;" /> mili giây
-    </label>
-  </div>
-  <div class="row">
-    <button id="btn-rv-sel" class="danger" disabled>🗑 Thu hồi tin nhắn đã chọn</button>
-    <button id="btn-rv-range" class="danger" disabled title="Thu hồi từ tin nhắn đã chọn đầu tiên đến tin nhắn đã chọn cuối cùng, bao gồm cả các tin nhắn ở giữa chưa tick">🗑 Thu hồi 1 đoạn</button>
-    <button id="btn-rv-stop" disabled>⏹ Dừng</button>
-    <button id="btn-export-pdf" title="Xuất các tin nhắn đang hiển thị ra file PDF dạng chat">📄 Xuất PDF</button>
-    <button id="btn-export-json" title="Xuất các tin nhắn đang hiển thị ra file JSON">📋 Xuất JSON</button>
-    <button id="btn-stats" title="Xem thống kê cuộc trò chuyện">📊 Thống kê</button>
-  </div>
+<!-- Log toggle -->
+<div id="log-toggle">
+  <span class="arrow">▲</span>
+  <span id="log-label">Log</span>
 </div>
-
 <div id="log"></div>
 
+<!-- Media modal -->
 <div id="modal-bg">
   <div class="modal-loading" id="modal-loading">Đang tải ảnh...</div>
   <img id="modal-img" style="display:none" alt="" />
@@ -321,6 +650,7 @@
   </div>
 </div>
 
+<!-- Stats modal -->
 <div id="stats-bg">
   <div id="stats-box">
     <button class="close-btn" id="stats-close">✕</button>
@@ -330,5 +660,7 @@
 </div>
 
 <script src="panel.js"></script>
+<script src="panel-tabs.js"></script>
+<script src="panel-ai.js"></script>
 </body>
 </html>

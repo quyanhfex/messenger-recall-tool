@@ -6,7 +6,8 @@
 // ---- State ----
 const allMessages = new Map();    // messageId → MsgItem
 const contactCache = new Map();   // userId → { name, avatarUrl }
-let currentThreadKey = null;
+let currentThreadKey = null;   // thread đang mở trên tab Messenger
+let selectedViewThreadKey = null; // thread đang xem trong tab Xem
 let myId = null;
 let lastStatus = null;
 let sortDesc = true;
@@ -151,11 +152,16 @@ function updateStatusUI(status) {
   setBanner(null);
 
   myId = status.myId;
+  const prevThread = currentThreadKey;
   currentThreadKey = status.threadKey;
+  // Nếu chưa chọn thread thủ công, tự động theo thread hiện tại
+  if (!selectedViewThreadKey || selectedViewThreadKey === prevThread) selectedViewThreadKey = currentThreadKey;
+  if (!selectedChatThreadKey || selectedChatThreadKey === prevThread) selectedChatThreadKey = currentThreadKey;
   $threadInfo.textContent = status.threadKey
     ? (status.threadName || 'Thread') + '  ·  ' + status.threadKey
     : 'Chưa mở thread cụ thể';
-  $userInfo.textContent = 'ID người dùng: ' + (status.myId || '?') + '  ·  Đã giải mã: ' + status.plaintextCacheSize + ' tin nhắn';
+  const $userInfoText = el('user-info-text');
+  if ($userInfoText) $userInfoText.textContent = 'ID người dùng: ' + (status.myId || '?') + '  ·  Đã giải mã: ' + status.plaintextCacheSize + ' tin nhắn';
 }
 
 // ============================================================
@@ -196,10 +202,10 @@ function dbToItem(m, plain) {
   };
 }
 
-function extraToItem(e) {
+function extraToItem(e, threadKey) {
   return {
     messageId: e.messageId,                          // "100068...@msgr.7449..."
-    threadKeyStr: currentThreadKey,
+    threadKeyStr: threadKey || currentThreadKey,
     senderIdStr: e.senderId,
     isMine: e.isMine,
     isUnsent: false,
@@ -245,9 +251,10 @@ function applyFilter() {
   const from = $fFrom.value ? new Date($fFrom.value).getTime() : null;
   const to = $fTo.value ? new Date($fTo.value).getTime() + 86400000 : null;
 
+  const viewThread = selectedViewThreadKey || currentThreadKey;
   const out = [];
   for (const m of allMessages.values()) {
-    if (m.threadKeyStr !== currentThreadKey) continue;
+    if (m.threadKeyStr !== viewThread) continue;
     if (onlyMine && !m.isMine) continue;
     if (hideUnsent && m.isUnsent) continue;
     if (hideAdmin && m.isAdmin) continue;
@@ -417,7 +424,8 @@ function handleCheckbox(mid, checked, shiftKey) {
 }
 
 function updateSummary(filtered) {
-  const all = [...allMessages.values()].filter((m) => m.threadKeyStr === currentThreadKey);
+  const viewThread = selectedViewThreadKey || currentThreadKey;
+  const all = [...allMessages.values()].filter((m) => m.threadKeyStr === viewThread);
   $sumTotal.textContent = all.length;
   $sumMine.textContent = all.filter((m) => m.isMine).length;
   $sumDb.textContent = all.filter((m) => m.source === 'db').length;
@@ -456,6 +464,8 @@ async function refreshAll() {
 
   // Load persisted extras for current thread
   await loadExtrasFromStorage();
+  loadChatPeer();
+  buildThreadDropdown();
 
   // Load contact names (async, không block render)
   loadContactsInBackground();
@@ -509,14 +519,15 @@ function extrasStorageKey(threadKey) {
   return 'mr-extras:' + threadKey;
 }
 
-async function saveExtrasToStorage() {
-  if (!currentThreadKey) return;
+async function saveExtrasToStorage(threadKey) {
+  const saveThread = threadKey || currentThreadKey;
+  if (!saveThread) return;
   const extras = [...allMessages.values()]
-    .filter((m) => m.source === 'extra' && m.threadKeyStr === currentThreadKey);
+    .filter((m) => m.source === 'extra' && m.threadKeyStr === saveThread);
   if (!extras.length) return;
   try {
     await chrome.storage.local.set({
-      [extrasStorageKey(currentThreadKey)]: {
+      [extrasStorageKey(saveThread)]: {
         savedAt: Date.now(),
         items: extras.map((m) => ({
           messageId: m.messageId,
@@ -598,8 +609,9 @@ async function startLoad() {
   loNewestTs = 0;
   loSetRunning(true);
 
-  logLine(`📥 Bắt đầu tải tin nhắn (đến ngày ${$loFrom.value || 'không giới hạn'})`, 'info');
-  const resp = await rpc('loadOlderMessages', { fromDate, maxBatches: 500, batchSize, delayMs, requestId });
+  const loadThread = selectedViewThreadKey || currentThreadKey;
+  logLine(`📥 Bắt đầu tải tin nhắn thread ${loadThread} (đến ngày ${$loFrom.value || 'không giới hạn'})`, 'info');
+  const resp = await rpc('loadOlderMessages', { fromDate, maxBatches: 500, batchSize, delayMs, requestId, threadKey: loadThread });
   loSetRunning(false);
   loActiveRequestId = null;
 
@@ -608,7 +620,7 @@ async function startLoad() {
     const aborted = resp.result.aborted;
     $loState.textContent = aborted ? `Đã dừng (${total} tin nhắn)` : `✅ Hoàn thành (${total} tin nhắn)`;
     logLine(aborted ? `⏹ Đã dừng. Tải được ${total} tin nhắn.` : `✅ Tải xong ${total} tin nhắn.`, aborted ? 'info' : 'ok');
-    saveExtrasToStorage();
+    saveExtrasToStorage(loadThread);
   } else {
     $loState.textContent = '❌ Lỗi: ' + resp.error;
     logLine('❌ Tải thất bại: ' + resp.error, 'err');
@@ -624,6 +636,8 @@ async function stopLoad() {
 $loStart.addEventListener('click', startLoad);
 $loStop.addEventListener('click', stopLoad);
 el('btn-refresh').addEventListener('click', refreshAll);
+el('btn-view-refresh').addEventListener('click', refreshAll);
+el('btn-header-refresh').addEventListener('click', refreshAll);
 el('btn-clear-extra').addEventListener('click', clearExtras);
 
 // ============================================================
@@ -781,7 +795,7 @@ chrome.runtime.onMessage.addListener((msg) => {
     if (p.requestId !== loActiveRequestId) return;
     if (p.status === 'running' && p.items) {
       for (const it of p.items) {
-        mergeMsg(extraToItem(it));
+        mergeMsg(extraToItem(it, p.threadKey));
       }
       $loBatch.textContent = p.batch;
       $loCount.textContent = p.totalFetched;
@@ -1384,6 +1398,256 @@ $modalDownload.addEventListener('click', async () => {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 });
+
+// ============================================================
+// CHAT TAB
+// ============================================================
+const $chatMessages = el('chat-messages');
+const $chatInput = el('chat-input');
+const $chatSend = el('chat-send');
+const $chatPeerName = el('chat-peer-name');
+const $chatPeerId = el('chat-peer-id');
+
+let selectedChatThreadKey = null; // thread đang chọn trong tab Chat (độc lập với currentThreadKey)
+
+// ---- Thread dropdown (dùng chung cho cả Xem và Chat) ----
+function buildDropdown(dropdownEl, activeKey, onSelect) {
+  const threadMap = getThreadList();
+  if (!threadMap.size) {
+    dropdownEl.innerHTML = '<div class="tab-dropdown-inner"><div class="thread-dropdown-empty">Chưa có dữ liệu — tải tin nhắn trước</div></div>';
+    return;
+  }
+  const inner = document.createElement('div');
+  inner.className = 'tab-dropdown-inner';
+  inner.innerHTML = '<div class="tab-dropdown-header">Chọn cuộc trò chuyện</div>';
+  dropdownEl.innerHTML = '';
+  dropdownEl.appendChild(inner);
+  for (const { threadKey, peerIds } of threadMap.values()) {
+    const label = threadLabel(threadKey, peerIds);
+    const initials = label.slice(0, 2).toUpperCase();
+    // avatar: ưu tiên ảnh từ contactCache
+    const peerId = [...peerIds][0];
+    const avatarUrl = peerId ? contactCache.get(peerId)?.avatarUrl : null;
+    const avatarHtml = avatarUrl
+      ? `<img src="${avatarUrl}" />`
+      : initials;
+
+    const item = document.createElement('div');
+    item.className = 'thread-item' + (threadKey === activeKey ? ' active' : '');
+    item.innerHTML = `
+      <div class="ti-avatar">${avatarHtml}</div>
+      <div class="ti-info">
+        <span class="ti-name">${label}</span>
+        <span class="ti-key">${threadKey}</span>
+      </div>`;
+    item.addEventListener('click', () => onSelect(threadKey, label));
+    inner.appendChild(item);
+  }
+}
+
+let _threadListCache = null;
+
+async function fetchThreadList() {
+  const resp = await rpc('getThreadList');
+  if (resp.ok && resp.result) {
+    _threadListCache = resp.result;
+    // Cập nhật contactCache từ danh sách thread
+    for (const t of _threadListCache) {
+      for (const p of t.peers) {
+        if (p.name && !contactCache.has(p.id)) {
+          contactCache.set(p.id, { name: p.name, avatarUrl: p.avatarUrl });
+        }
+      }
+    }
+  }
+  return _threadListCache || [];
+}
+
+function buildDropdownFromList(dropdownEl, threadList, activeKey, onSelect) {
+  if (!threadList.length) {
+    dropdownEl.innerHTML = '<div class="tab-dropdown-inner"><div class="thread-dropdown-empty">Chưa có dữ liệu</div></div>';
+    return;
+  }
+  const inner = document.createElement('div');
+  inner.className = 'tab-dropdown-inner';
+  inner.innerHTML = '<div class="tab-dropdown-header">Chọn cuộc trò chuyện</div>';
+  dropdownEl.innerHTML = '';
+  dropdownEl.appendChild(inner);
+
+  for (const t of threadList) {
+    const initials = t.name.slice(0, 2).toUpperCase();
+    const avatarHtml = t.avatarUrl
+      ? `<img src="${t.avatarUrl}" />`
+      : initials;
+    const item = document.createElement('div');
+    item.className = 'thread-item' + (t.threadKey === activeKey ? ' active' : '');
+    item.innerHTML = `
+      <div class="ti-avatar">${avatarHtml}</div>
+      <div class="ti-info">
+        <span class="ti-name">${t.name}</span>
+        <span class="ti-key">${t.threadKey}</span>
+      </div>`;
+    item.addEventListener('click', () => onSelect(t.threadKey, t.name));
+    inner.appendChild(item);
+  }
+}
+
+async function buildThreadDropdown() {
+  const threadList = await fetchThreadList();
+
+  buildDropdownFromList(el('chat-thread-dropdown'), threadList, selectedChatThreadKey, (threadKey) => {
+    selectedChatThreadKey = threadKey;
+    switchToTab('chat');
+    const d = el('chat-thread-dropdown');
+    d.style.display = 'none';
+    setTimeout(() => { d.style.display = ''; }, 300);
+    loadChatPeer();
+  });
+
+  buildDropdownFromList(el('view-thread-dropdown'), threadList, selectedViewThreadKey, (threadKey) => {
+    selectedViewThreadKey = threadKey;
+    selectedIds.clear();
+    switchToTab('view');
+    const d = el('view-thread-dropdown');
+    d.style.display = 'none';
+    setTimeout(() => { d.style.display = ''; }, 300);
+    renderList();
+  });
+}
+
+function switchToTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el(tabName + '-panel').classList.add('active');
+  document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
+}
+
+function chatAddBubble(text, isMine, senderName, ts, state) {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-bubble-wrap ' + (isMine ? 'me' : 'other');
+
+  if (!isMine && senderName) {
+    const nameEl = document.createElement('div');
+    nameEl.className = 'chat-sender';
+    nameEl.textContent = senderName;
+    wrap.appendChild(nameEl);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble' + (state === 'pending' ? ' pending' : state === 'error' ? ' error' : '');
+  bubble.textContent = text;
+  wrap.appendChild(bubble);
+
+  if (ts) {
+    const tsEl = document.createElement('div');
+    tsEl.className = 'chat-ts';
+    tsEl.textContent = fmtTime(ts);
+    wrap.appendChild(tsEl);
+  }
+
+  $chatMessages.appendChild(wrap);
+  $chatMessages.scrollTop = $chatMessages.scrollHeight;
+  return bubble;
+}
+
+async function loadChatPeer() {
+  // Ưu tiên selectedChatThreadKey, fallback về currentThreadKey
+  const threadKey = selectedChatThreadKey || currentThreadKey;
+  if (!threadKey) return;
+  if (!selectedChatThreadKey) selectedChatThreadKey = threadKey;
+
+  try {
+    // Tìm peer từ allMessages trước
+    let peerIds = [...new Set(
+      [...allMessages.values()]
+        .filter(m => m.threadKeyStr === threadKey && m.senderIdStr && m.senderIdStr !== myId)
+        .map(m => m.senderIdStr)
+    )];
+
+    // Nếu không có messages, tìm từ thread list (dropdown data)
+    if (!peerIds.length) {
+      const threadList = await fetchThreadList();
+      const found = threadList.find(t => t.threadKey === threadKey);
+      if (found && found.peers) {
+        peerIds = found.peers.map(p => p.id).filter(id => id !== myId);
+        // Đã có tên từ thread list
+        if (found.name) {
+          $chatPeerName.textContent = found.name;
+          $chatPeerId.textContent = '(' + threadKey + ')';
+          $chatSend.disabled = false;
+          return;
+        }
+      }
+    }
+
+    if (!peerIds.length) {
+      $chatPeerName.textContent = threadKey === currentThreadKey ? (lastStatus?.threadName || threadKey) : threadKey;
+      $chatPeerId.textContent = '';
+      $chatSend.disabled = false;
+      return;
+    }
+
+    // Fetch contacts chưa có trong cache
+    const needFetch = peerIds.filter(id => !contactCache.has(id));
+    if (needFetch.length) {
+      const r = await rpc('getContactsByIds', { userIds: needFetch });
+      if (r.ok) for (const [id, info] of Object.entries(r.result || {})) contactCache.set(id, info);
+    }
+
+    if (peerIds.length === 1) {
+      const c = contactCache.get(peerIds[0]);
+      const name = c?.name || c?.firstName || (threadKey === currentThreadKey ? lastStatus?.threadName : null) || peerIds[0].slice(-6);
+      $chatPeerName.textContent = name;
+      $chatPeerId.textContent = '(' + peerIds[0] + ')';
+    } else {
+      const names = peerIds.map(id => { const c = contactCache.get(id); return c?.firstName || c?.name || id.slice(-4); }).join(', ');
+      $chatPeerName.textContent = (threadKey === currentThreadKey ? lastStatus?.threadName : null) || names;
+      $chatPeerId.textContent = '(' + peerIds.length + ' người)';
+    }
+    $chatSend.disabled = false;
+    buildThreadDropdown();
+  } catch (e) {
+    $chatPeerName.textContent = '—';
+    $chatSend.disabled = false;
+  }
+}
+
+async function doSendChat() {
+  const text = $chatInput.value.trim();
+  if (!text) return;
+  $chatInput.value = '';
+  $chatInput.style.height = '';
+  $chatSend.disabled = true;
+
+  const bubble = chatAddBubble(text, true, null, Date.now(), 'pending');
+  const chatThreadKey = selectedChatThreadKey || currentThreadKey;
+  try {
+    const resp = await rpc('sendMessage', { text, threadKey: chatThreadKey });
+    if (resp.ok && resp.result && resp.result.success !== false) {
+      bubble.classList.remove('pending');
+    } else {
+      bubble.classList.remove('pending');
+      bubble.classList.add('error');
+      bubble.textContent = '❌ Gửi thất bại: ' + (resp.error || 'unknown');
+      logLine('Chat send fail: ' + (resp.error || JSON.stringify(resp.result)), 'err');
+    }
+  } catch (e) {
+    bubble.classList.add('error');
+    bubble.textContent = '❌ Lỗi: ' + e.message;
+  } finally {
+    $chatSend.disabled = false;
+  }
+}
+
+$chatSend.addEventListener('click', doSendChat);
+$chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSendChat(); }
+});
+$chatInput.addEventListener('input', () => {
+  $chatInput.style.height = 'auto';
+  $chatInput.style.height = Math.min($chatInput.scrollHeight, 80) + 'px';
+});
+el('btn-chat-refresh').addEventListener('click', loadChatPeer);
 
 // ============================================================
 // Init

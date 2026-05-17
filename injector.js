@@ -378,6 +378,29 @@
     return best ? best.text : null;
   }
 
+  // ---- Tìm threadIdAtMsgr từ participants table (không cần messages) ----
+  async function findThreadIdFromParticipants(threadKey) {
+    const s = ensureStore();
+    if (!s) return null;
+    const { I64 } = getMods();
+    if (!I64) return null;
+    const myId = getMyId();
+    return await s.runInTransaction(txn => {
+      const it = s.table('participants').entries(txn);
+      while (true) {
+        const { value, done } = it.next();
+        if (done) break;
+        const [, val] = value;
+        const tk = I64.to_string(val.threadKey);
+        if (tk === threadKey) {
+          const cid = I64.to_string(val.contactId);
+          if (cid !== myId) return Promise.resolve(cid + '@msgr');
+        }
+      }
+      return Promise.resolve(null);
+    }, 'readonly', undefined, undefined, 'findThreadIdFromParticipants');
+  }
+
   // State for running load-older loop
   let _loadOlderActive = false;
   let _loadOlderAbort = false;
@@ -396,20 +419,29 @@
     _loadOlderAbort = false;
 
     try {
-      const urlThread = getCurrentThreadKey();
-      if (!urlThread) throw new Error('no_thread_open');
+      // Cho phép truyền threadKey từ panel (không cần thread đang mở)
+      const targetThread = opts.threadKey || getCurrentThreadKey();
+      if (!targetThread) throw new Error('no_thread_open');
 
-      // Bắt đầu fetch từ tin mới nhất trong DB, lùi dần về quá khứ.
-      // Mục tiêu: tải tất cả tin trong khoảng [fromDate, now].
+      // Tìm threadIdAtMsgr và cursor
+      let threadIdAtMsgr = null;
+      let cursorTs = Date.now() + 86400000;
+      let cursorId = '0';
+
+      // Thử lấy từ messages DB trước
       const allDb = await getAllMessages();
-      const inThread = allDb.filter((m) => m.threadKeyStr === urlThread);
-      if (!inThread.length) throw new Error('thread_empty_in_db');
-      inThread.sort((a, b) => b.timestampMsNum - a.timestampMsNum); // mới → cũ
-      const newestDb = inThread[0];
-      const threadIdAtMsgr = newestDb.messageId.split('.')[0];
-      // Cursor = tin mới nhất + 1ms để bao gồm cả tin đó trong fetch
-      let cursorTs = newestDb.timestampMsNum + 1;
-      let cursorId = newestDb.messageId.split('.')[1];
+      const inThread = allDb.filter((m) => m.threadKeyStr === targetThread);
+      if (inThread.length) {
+        inThread.sort((a, b) => b.timestampMsNum - a.timestampMsNum); // mới → cũ
+        const newestDb = inThread[0];
+        threadIdAtMsgr = newestDb.messageId.split('.')[0];
+        cursorTs = newestDb.timestampMsNum + 1;
+        cursorId = newestDb.messageId.split('.')[1];
+      } else {
+        // Fallback: tìm từ participants table
+        threadIdAtMsgr = await findThreadIdFromParticipants(targetThread);
+        if (!threadIdAtMsgr) throw new Error('cannot_find_thread_id');
+      }
 
       const mods = getMods();
       const bridge = mods.MAWBridgeSendAndReceive;
@@ -431,7 +463,7 @@
             window.postMessage({
               source: 'mr-injector', type: 'loadOlderProgress', requestId,
               status: 'error', batch: i + 1, maxBatches, totalFetched: collected.length,
-              error: 'bridge_fail',
+              error: 'bridge_fail', threadKey: targetThread,
             }, '*');
           }
           break;
@@ -466,7 +498,7 @@
             status: 'running', batch: i + 1, maxBatches,
             batchSize: msgs.length, totalFetched: collected.length,
             oldestTs: oldestInBatch.timestampMs,
-            items, // gửi batch để panel append live
+            items, threadKey: targetThread, // gửi batch + threadKey để panel append live
           }, '*');
         }
 
@@ -743,6 +775,153 @@
     };
   }
 
+  // ---- Lay danh sach tat ca threads (sort theo lastActivity) ----
+  async function getThreadList() {
+    const s = ensureStore();
+    if (!s) throw new Error('store_not_ready');
+    const { I64 } = getMods();
+    if (!I64) throw new Error('module_missing:I64');
+    const myId = getMyId();
+
+    // 1. threads → lastActivityTs + threadPictureUrl
+    const threadActivity = new Map();
+    await s.runInTransaction(txn => {
+      const it = s.table('threads').entries(txn);
+      while (true) {
+        const { value, done } = it.next();
+        if (done) break;
+        const [, val] = value;
+        const tk = I64.to_string(val.threadKey);
+        const ts = parseInt(I64.to_string(val.lastActivityTimestampMs));
+        threadActivity.set(tk, { ts, avatarUrl: val.threadPictureUrl || null });
+      }
+      return Promise.resolve();
+    }, 'readonly', undefined, undefined, 'MR.getThreadList.threads');
+
+    // 2. participants → peerIds per thread
+    const threadPeers = new Map();
+    await s.runInTransaction(txn => {
+      const it = s.table('participants').entries(txn);
+      while (true) {
+        const { value, done } = it.next();
+        if (done) break;
+        const [, val] = value;
+        const tk = I64.to_string(val.threadKey);
+        const cid = I64.to_string(val.contactId);
+        if (cid === myId) continue;
+        if (!threadPeers.has(tk)) threadPeers.set(tk, []);
+        threadPeers.get(tk).push(cid);
+      }
+      return Promise.resolve();
+    }, 'readonly', undefined, undefined, 'MR.getThreadList.participants');
+
+    // 3. contacts → names + avatars
+    const contactInfo = new Map();
+    await s.runInTransaction(txn => {
+      const it = s.table('contacts').entries(txn);
+      while (true) {
+        const { value, done } = it.next();
+        if (done) break;
+        const [, val] = value;
+        if (!val.id) continue;
+        const id = I64.to_string(val.id);
+        contactInfo.set(id, {
+          name: val.name || val.firstName || null,
+          avatarUrl: val.profilePictureUrl || null,
+        });
+      }
+      return Promise.resolve();
+    }, 'readonly', undefined, undefined, 'MR.getThreadList.contacts');
+
+    // 4. kết hợp + sort
+    const result = [];
+    for (const [threadKey, peerIds] of threadPeers.entries()) {
+      const act = threadActivity.get(threadKey) || { ts: 0, avatarUrl: null };
+      const peers = peerIds.map(id => ({
+        id,
+        name: contactInfo.get(id)?.name || null,
+        avatarUrl: contactInfo.get(id)?.avatarUrl || null,
+      }));
+      const name = peers.map(p => p.name || p.id.slice(-6)).join(', ');
+      const avatarUrl = peers.length === 1
+        ? (peers[0].avatarUrl || act.avatarUrl)
+        : act.avatarUrl;
+      result.push({ threadKey, name, peers, avatarUrl, lastActivityTs: act.ts });
+    }
+    result.sort((a, b) => b.lastActivityTs - a.lastActivityTs);
+    return result;
+  }
+
+  // ---- Lay danh sach participants trong thread hien tai ----
+  async function getThreadParticipants() {
+    const s = ensureStore();
+    if (!s) throw new Error('store_not_ready');
+    const mods = getMods();
+    if (!mods.I64) throw new Error('module_missing:I64');
+    const I64 = mods.I64;
+    const threadKey = getCurrentThreadKey();
+    if (!threadKey) throw new Error('no_thread_open');
+
+    return s.runInTransaction(function (txn) {
+      const tbl = s.table('participants');
+      const it = tbl.entries(txn);
+      const participantIds = [];
+      while (true) {
+        const { value, done } = it.next();
+        if (done) break;
+        const [, val] = value;
+        const tkStr = val.threadKey ? I64.to_string(val.threadKey) : null;
+        if (tkStr === threadKey && val.id) {
+          participantIds.push(I64.to_string(val.id));
+        }
+      }
+      return Promise.resolve(participantIds);
+    }, 'readonly', undefined, undefined, 'MR.getParticipants');
+  }
+
+  // ---- Gui tin nhan qua bridge ----
+  async function sendMessage(text, overrideThreadKey, overrideChatJid) {
+    const mods = getMods();
+    if (!mods.MAWBridgeSendAndReceive) throw new Error('module_missing:MAWBridgeSendAndReceive');
+    const threadKey = overrideThreadKey || getCurrentThreadKey();
+    if (!threadKey) throw new Error('no_thread_open');
+
+    // Nếu caller đã biết chatJid (ví dụ AI auto-reply từ NewMsg event) → dùng luôn
+    let threadIdAtMsgr = overrideChatJid || null;
+
+    if (!threadIdAtMsgr) {
+      // Lay threadIdAtMsgr tu tin moi nhat trong DB, hoac tu participants
+      const allDb = await getAllMessages();
+      const inThread = allDb.filter((m) => m.threadKeyStr === threadKey);
+      if (inThread.length) {
+        inThread.sort((a, b) => b.timestampMsNum - a.timestampMsNum);
+        threadIdAtMsgr = inThread[0].messageId.split('.')[0];
+      } else {
+        // Fallback: tìm từ participants table
+        threadIdAtMsgr = await findThreadIdFromParticipants(threadKey);
+        if (!threadIdAtMsgr) throw new Error('cannot_find_thread_id');
+      }
+    }
+
+    const ts = Date.now();
+    const msgId = String(ts) + String(Math.floor(Math.random() * 100000));
+    const payload = {
+      args: {
+        content: text,
+        initiatingSource: 'KEYBOARD_SHORTCUT',
+        optimisticMsg: { msgId, ts },
+        source: 'inbox',
+        mentionedJids: [],
+        commands: [],
+      },
+      chatJid: threadIdAtMsgr,
+      externalId: msgId,
+      qplEventType: { i: 25313175, r: 32 },
+      qplInstanceKey: ts + Math.floor(Math.random() * 10000) + 10000,
+    };
+    return mods.MAWBridgeSendAndReceive.sendAndReceive('backend', 'sendMsg', payload);
+  }
+
   // ---- Revoke 1 tin extra (ngoài DB) bằng externalId ----
   async function revokeExternal(threadIdAtMsgr, externalId) {
     const mods = getMods();
@@ -974,6 +1153,14 @@
         return getContactsByIds(params.userIds || []);
       case 'fetchAsBase64':
         return fetchAsBase64(params.url);
+      case 'getThreadList':
+        return getThreadList();
+      case 'sendMessage':
+        return sendMessage(params.text, params.threadKey, params.chatJid);
+      case 'getThreadParticipants':
+        return getThreadParticipants();
+      case 'getRecentMessages':
+        return getRecentMessages(params.threadKey, params.count || 15);
       default:
         throw new Error('unknown_action:' + action);
     }
@@ -999,6 +1186,104 @@
       }, '*');
     }
   });
+
+  // ---- getRecentMessages: lấy N tin gần nhất qua bridge (có plaintext) ----
+  async function getRecentMessages(threadKey, count) {
+    const myId = getMyId();
+    // Tìm threadIdAtMsgr — chỉ chấp nhận tin DB có format E2EE (xxx@msgr.yyy).
+    // Tin Messenger thường cũ dạng "mid.$xxx" sẽ split ra "mid" → bridge trả 0 tin.
+    let threadIdAtMsgr = null;
+    const allDb = await getAllMessages();
+    const newestE2ee = allDb
+      .filter((m) => m.threadKeyStr === threadKey
+        && typeof m.messageId === 'string'
+        && m.messageId.includes('@msgr.'))
+      .sort((a, b) => b.timestampMsNum - a.timestampMsNum)[0];
+    if (newestE2ee) {
+      threadIdAtMsgr = newestE2ee.messageId.split('.')[0];
+    } else {
+      threadIdAtMsgr = await findThreadIdFromParticipants(threadKey);
+    }
+    if (!threadIdAtMsgr) throw new Error('cannot_find_thread_id');
+
+    const mods = getMods();
+    if (!mods.MAWBridgeSendAndReceive) throw new Error('module_missing');
+    const resp = await mods.MAWBridgeSendAndReceive.sendAndReceive('mps', 'mpsLoadMessages', {
+      debug: { purpose: 'ai-context' },
+      direction: 'desc',
+      from: [Date.now() + 86400000, '0'],
+      numMessages: count,
+      threadId: threadIdAtMsgr,
+    });
+    if (!resp || !resp.success) return [];
+    const msgs = (resp.value && resp.value.messages) || [];
+    return msgs.filter(m => m && m.toplevelProtobuf).map((m) => {
+      const tp = m.toplevelProtobuf;
+      const text = extractTextFromPayload(tp.payload);
+      return {
+        senderId: tp.senderId,
+        isMine: tp.senderId === myId,
+        timestampMs: tp.timestampMs,
+        text: text || '',
+        messageId: tp.messageId,
+      };
+    }).sort((a, b) => a.timestampMs - b.timestampMs);
+  }
+
+  // ---- Hook portal.$8: bắt NewMsg realtime ----
+  (function installNewMsgHook() {
+    function tryHook() {
+      try {
+        const p = tryRequire('MAWCrossWorkerPortal');
+        if (!p) return false;
+        const portal = p.getOrCreateCrossWorkerPortal();
+        if (!portal) return false;
+        const proto = Object.getPrototypeOf(portal);
+        if (!proto.$8 || proto.__mr_newmsg_hooked) return !!proto.__mr_newmsg_hooked;
+        const orig = proto.$8;
+        proto.$8 = function(port, msg) {
+          try {
+            const myId = getMyId(); // lấy mỗi lần để luôn đúng
+            if (msg && msg.type === 'request' && msg.content && msg.content.name === 'uiUpdate') {
+              const arg = msg.content.arg;
+              if (arg && Array.isArray(arg.events)) {
+                for (const ev of arg.events) {
+                  if (ev.tag === 'NewMsg' && ev.value) {
+                    const v = ev.value;
+                    const isText = v.type_ === 'Text' && v.content;
+                    // E2EE: v.content thường là encrypted (dạng "123##base64...")
+                    let msgText = v.type_ || '[media]';
+                    if (isText) {
+                      msgText = /^\d+##/.test(v.content) ? '[tin nhắn mới]' : v.content;
+                    }
+                    window.postMessage({
+                      source: 'mr-injector',
+                      type: 'newMsg',
+                      chatJid: v.chatJid || '',
+                      sender: v.sender || '',
+                      isMine: v.sender === myId,
+                      text: msgText,
+                      ts: v.ts ? v.ts * 1000 : Date.now(),
+                      msgId: v.msgId || '',
+                      msgType: v.type_ || '',
+                    }, '*');
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+          return orig.call(this, port, msg);
+        };
+        proto.__mr_newmsg_hooked = true;
+        console.log('[MR] ✅ NewMsg hook installed');
+        return true;
+      } catch (_) { return false; }
+    }
+    if (!tryHook()) {
+      let t = 0;
+      const iv = setInterval(() => { if (tryHook() || ++t > 60) clearInterval(iv); }, 500);
+    }
+  })();
 
   // ---- Auto-capture store + signal ready ----
   function tryCaptureAndAnnounce() {

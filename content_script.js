@@ -17,8 +17,8 @@ window.addEventListener('message', (event) => {
     return;
   }
 
-  // Async events (status, progress, autoCollectProgress, loadOlderProgress) → broadcast to panel
-  if (['status', 'progress', 'autoCollectProgress', 'loadOlderProgress'].includes(data.type)) {
+  // Async events (status, progress, autoCollectProgress, loadOlderProgress, newMsg) → broadcast to panel
+  if (['status', 'progress', 'autoCollectProgress', 'loadOlderProgress', 'newMsg'].includes(data.type)) {
     chrome.runtime.sendMessage({
       target: 'panel',
       eventType: data.type,
