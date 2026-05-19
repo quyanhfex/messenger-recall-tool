@@ -3,14 +3,16 @@ cdnjs.cloudflare.com/
 khamphaweb/
 static.xx.fbcdn.net/
 www.facebook.com/
-
-# Cookie injector (chứa session cookies nhạy cảm)
-cookie-injector/
+code fb/
 
 server/cookies.json
+server/cookies-input.json
+server/session-input.json
+server/sessions/
 server/signal_keys.json
 server/signal_keys_decrypted.json
 server/playwright-profile/
+server.tar.gz
 node_modules/
 dist/
 *.zip

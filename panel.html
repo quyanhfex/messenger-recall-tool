@@ -136,7 +136,6 @@
     letter-spacing: 0.3px; flex-shrink: 0; border-bottom: 1px solid #30363d;
   }
   #list-wrapper { flex: 1; overflow-y: auto; }
-  #list {}
 
   .date-divider {
     background: #161b22; color: #8b949e; font-size: 10px;
@@ -341,75 +340,347 @@
   }
   #chat-send:hover:not(:disabled) { background: #388bfd; }
   #chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
-  /* ---- Tab: AI Auto-Reply ---- */
-  #ai-panel { overflow: hidden; }
-  .ai-header {
-    padding: 8px 12px; flex-shrink: 0; border-bottom: 1px solid #30363d;
-    background: #161b22; display: flex; align-items: center; gap: 8px;
+
+  /* ---- Stego (hidden text) ---- */
+  /* Nút ⚙ setting — đặt cạnh nút ↻ */
+  #stego-menu-btn {
+    background: transparent; border: 1px solid #30363d; border-radius: 4px;
+    color: #c9d1d9; cursor: pointer; font-family: inherit;
+    transition: all 0.15s;
   }
-  .ai-toggle-btn {
-    padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 700;
-    border: 1px solid #30363d; background: #21262d; color: #8b949e; cursor: pointer;
-    transition: all 0.2s;
+  #stego-menu-btn:hover { border-color: #8b5cf6; }
+  #stego-menu-btn.active { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+
+  /* Settings panel xổ ra dưới chat-peer-bar */
+  #stego-settings-panel {
+    display: none; flex-shrink: 0; flex-direction: column; gap: 8px;
+    padding: 10px 12px; border-bottom: 1px solid #21262d; background: #0d1117;
+    align-items: stretch;
   }
-  .ai-toggle-btn.active { background: #da3633; border-color: #f85149; color: #fff; }
-  .ai-toggle-btn:hover { opacity: 0.85; }
-  .ai-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  #stego-settings-panel.open { display: flex; flex-direction: column; }
+  #stego-settings-panel > div { width: 100%; }
+  #stego-settings-panel input {
+    background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+    color: #c9d1d9; padding: 7px 9px; font-size: 12px;
+    font-family: inherit; width: 100%; box-sizing: border-box;
   }
-  .ai-dot.off { background: #6e7681; }
-  .ai-dot.on { background: #3fb950; animation: ai-blink 2s ease-in-out infinite; }
-  .ai-dot.thinking { background: #d29922; animation: ai-blink 0.5s ease-in-out infinite; }
-  @keyframes ai-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-  #ai-settings {
-    display: none; flex-shrink: 0; flex-direction: column; gap: 6px;
-    padding: 8px 12px; border-bottom: 1px solid #21262d; background: #0d1117;
-    max-height: 280px; overflow-y: auto;
+  #stego-settings-panel input:focus { outline: none; border-color: #8b5cf6; }
+  #stego-settings-panel label {
+    display: block; font-size: 10px; color: #6e7681;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    font-weight: 600; margin-bottom: 5px;
   }
-  #ai-settings.open { display: flex; }
-  #ai-settings label { font-size: 10px; color: #6e7681; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; margin-bottom: 2px; }
-  #ai-settings textarea {
-    background: #161b22; border: 1px solid #30363d; border-radius: 6px;
-    color: #c9d1d9; padding: 6px 8px; font-size: 11px; font-family: inherit;
-    resize: vertical; min-height: 50px; max-height: 120px;
+  .stego-row { display: flex; gap: 6px; }
+  .stego-row > button {
+    background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+    color: #c9d1d9; padding: 6px 14px; font-size: 11px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
   }
-  #ai-settings textarea:focus { outline: none; border-color: #8b5cf6; }
-  #ai-settings select, #ai-settings input[type="text"], #ai-settings input[type="password"], #ai-settings input[type="number"] {
-    background: #161b22; border: 1px solid #30363d; border-radius: 4px;
-    color: #c9d1d9; padding: 4px 7px; font-size: 11px; font-family: inherit; width: 100%;
+  .stego-row > button:hover { background: #2d333b; border-color: #8b5cf6; }
+  .stego-row > button.primary { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+  .stego-row > button.primary:hover { background: #7c4ef0; }
+
+  /* Icon 🔒 nổi lên khi hover nút Gửi */
+  #chat-input-bar { position: relative; }
+  #stego-hover-icon {
+    position: absolute;
+    bottom: calc(100% - 2px);
+    right: 12px;
+    width: 28px; height: 28px;
+    background: #8b5cf6; color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 0.18s, transform 0.18s, background 0.15s;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    z-index: 50;
+    border: 2px solid #161b22;
+    /* Bridge an toàn để di chuột từ input-bar lên icon không bị ngắt */
   }
-  #ai-settings select:focus, #ai-settings input:focus { outline: none; border-color: #8b5cf6; }
-  .ai-setting-row { display: flex; gap: 8px; }
-  .ai-setting-row > div { flex: 1; }
-  .ai-setting-row label { display: block; }
-  #ai-active-list {
-    flex-shrink: 0; max-height: 200px; overflow-y: auto;
+  #stego-hover-icon::before {
+    content: '';
+    position: absolute;
+    top: 100%; left: -8px; right: -8px;
+    height: 14px;
+  }
+  #stego-hover-icon.visible {
+    opacity: 1; pointer-events: auto; transform: translateY(0);
+  }
+  #stego-hover-icon.has-content {
+    background: #3fb950;
+    box-shadow: 0 3px 10px rgba(63, 185, 80, 0.4);
+  }
+  #stego-hover-icon:hover { transform: translateY(0) scale(1.1); }
+
+  /* Popup tin ẩn — nổi từ icon 🔒 */
+  #stego-compose-popup {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 40px);
+    right: 8px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    width: 280px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  #stego-compose-popup.open { display: block; }
+  #stego-compose-popup::after {
+    content: '';
+    position: absolute;
+    top: 100%; right: 18px;
+    border: 7px solid transparent;
+    border-top-color: #161b22;
+  }
+  #stego-compose-popup textarea {
+    width: 100%; box-sizing: border-box;
+    background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+    color: #c9d1d9; padding: 7px 9px; font-size: 12px;
+    font-family: inherit; line-height: 1.4;
+    resize: vertical; min-height: 50px; max-height: 100px;
+  }
+  #stego-compose-popup textarea:focus { outline: none; border-color: #8b5cf6; }
+  #stego-compose-popup input {
+    width: 100%; box-sizing: border-box;
+    background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+    color: #c9d1d9; padding: 6px 9px; font-size: 12px;
+    font-family: inherit;
+  }
+  #stego-compose-popup input:focus { outline: none; border-color: #8b5cf6; }
+  #stego-compose-popup button {
+    background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+    color: #c9d1d9; padding: 5px 12px; font-size: 11px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  #stego-compose-popup button:hover { border-color: #8b5cf6; }
+  #stego-compose-popup button.primary { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+  #stego-compose-popup button.primary:hover { background: #7c4ef0; }
+
+  /* Icon 🔒 trên tin có hidden payload (tab Xem + tab Chat) */
+  .stego-lock-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 4px;
+    background: rgba(139, 92, 246, 0.15); color: #c4b5fd;
+    cursor: pointer; font-size: 11px; margin-left: 6px;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    transition: all 0.15s; flex-shrink: 0; vertical-align: middle;
+  }
+  .stego-lock-icon:hover { background: rgba(139, 92, 246, 0.3); border-color: #8b5cf6; }
+  .stego-lock-icon.decoded { background: rgba(63, 185, 80, 0.15); border-color: rgba(63, 185, 80, 0.4); color: #56d364; }
+
+  /* Modal decode */
+  #stego-modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; padding: 20px;
+  }
+  #stego-modal-bg.show { display: flex; }
+  #stego-modal {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    padding: 18px; max-width: 480px; width: 100%; color: #c9d1d9;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  #stego-modal h3 {
+    font-size: 13px; color: #c4b5fd; margin: 0; display: flex; align-items: center; gap: 8px;
+  }
+  #stego-modal label {
+    display: block; font-size: 10px; color: #6e7681;
+    text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 5px;
+  }
+  #stego-modal input[type="password"] {
+    background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+    color: #c9d1d9; padding: 7px 10px; font-size: 12px;
+    font-family: inherit; width: 100%;
+  }
+  #stego-modal input:focus { outline: none; border-color: #8b5cf6; }
+  #stego-modal .stego-modal-result {
+    background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+    padding: 10px 12px; font-size: 12px; color: #c9d1d9;
+    white-space: pre-wrap; word-wrap: break-word; max-height: 200px; overflow-y: auto;
+    line-height: 1.5;
+  }
+  #stego-modal .stego-modal-result.error { color: #f85149; border-color: #f85149; }
+  #stego-modal .stego-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  #stego-modal button {
+    background: #21262d; border: 1px solid #30363d; border-radius: 6px;
+    color: #c9d1d9; padding: 6px 14px; font-size: 11px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  #stego-modal button:hover { background: #2d333b; border-color: #8b5cf6; }
+  #stego-modal button.primary { background: #8b5cf6; border-color: #8b5cf6; color: #fff; }
+  #stego-modal button.primary:hover { background: #7c4ef0; }
+  /* CSS cho encode/decode panel cũ đã được gỡ — chỉ còn settings panel + popup compose */
+  /* ---- Tab: AI Auto-Reply — Dark Minimalist ---- */
+  #ai-panel { overflow: hidden; background: #0d1117; }
+
+  /* Hero — chỉ 1 hàng, không gradient, không glow */
+  .ai-hero {
+    flex-shrink: 0; padding: 14px 12px;
+    display: flex; align-items: center; gap: 10px;
     border-bottom: 1px solid #21262d;
   }
-  .ai-thread-card {
-    padding: 6px 12px; border-bottom: 1px solid #161b22;
-    transition: background 0.15s;
+  .ai-toggle-btn {
+    flex-shrink: 0; padding: 7px 16px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+    border: 1px solid #30363d; background: transparent; color: #c9d1d9;
+    cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
   }
-  .ai-thread-card:hover { background: #161b22; }
+  .ai-toggle-btn:hover { border-color: #8b949e; }
+  .ai-toggle-btn.active {
+    background: #8b5cf6; border-color: #8b5cf6; color: #fff;
+  }
+  .ai-toggle-btn.active:hover { background: #7c4ef0; border-color: #7c4ef0; }
+
+  .ai-status {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: #6e7681;
+  }
+  .ai-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: #484f58; }
+  .ai-dot.on { background: #8b5cf6; animation: ai-blink 2s ease-in-out infinite; }
+  .ai-dot.thinking { background: #d29922; animation: ai-blink 0.6s ease-in-out infinite; }
+  @keyframes ai-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Compact icon button row (Cài đặt / Log toggle) */
+  .ai-actions {
+    flex-shrink: 0; display: flex; gap: 4px; padding: 6px 8px;
+    border-bottom: 1px solid #21262d;
+  }
+  .ai-icon-btn {
+    background: transparent; border: 1px solid transparent;
+    color: #6e7681; cursor: pointer; padding: 4px 9px;
+    font-size: 11px; border-radius: 4px; font-family: inherit;
+    transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .ai-icon-btn:hover { color: #c9d1d9; background: #161b22; }
+  .ai-icon-btn.active { color: #c9d1d9; background: #161b22; border-color: #30363d; }
+  .ai-icon-btn .ai-badge {
+    background: #8b5cf6; color: #fff; padding: 0 5px; border-radius: 8px;
+    font-size: 9px; font-weight: 700; min-width: 14px; text-align: center;
+  }
+
+  /* Settings panel — collapsed by default */
+  #ai-settings {
+    display: none; flex-shrink: 0; flex-direction: column; gap: 12px;
+    padding: 14px 12px; border-bottom: 1px solid #21262d;
+    max-height: 360px; overflow-y: auto;
+  }
+  #ai-settings.open { display: flex; }
+  #ai-settings label {
+    display: block; font-size: 10px; color: #6e7681;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    font-weight: 600; margin-bottom: 5px;
+  }
+  #ai-settings textarea {
+    background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+    color: #c9d1d9; padding: 8px 10px; font-size: 12px;
+    font-family: inherit; line-height: 1.5;
+    resize: vertical; min-height: 60px; max-height: 140px; width: 100%;
+    transition: border-color 0.15s;
+  }
+  #ai-settings textarea:focus { outline: none; border-color: #8b5cf6; }
+  #ai-settings select,
+  #ai-settings input[type="text"],
+  #ai-settings input[type="password"],
+  #ai-settings input[type="number"] {
+    background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+    color: #c9d1d9; padding: 7px 10px; font-size: 12px;
+    font-family: inherit; width: 100%;
+    transition: border-color 0.15s;
+  }
+  #ai-settings select:focus,
+  #ai-settings input:focus { outline: none; border-color: #8b5cf6; }
+
+  .ai-field { display: flex; flex-direction: column; }
+  .ai-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .ai-apikey-wrap { position: relative; }
+  .ai-apikey-wrap input { padding-right: 34px; }
+  .ai-apikey-eye {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: transparent; border: none; color: #6e7681;
+    cursor: pointer; padding: 4px 6px; font-size: 12px; line-height: 1;
+  }
+  .ai-apikey-eye:hover { color: #c9d1d9; }
+
+  .ai-temp-row { display: flex; align-items: center; gap: 10px; }
+  .ai-temp-row input[type="range"] { flex: 1; accent-color: #8b5cf6; }
+  .ai-temp-val {
+    min-width: 26px; text-align: right; font-size: 11px;
+    color: #c9d1d9; font-variant-numeric: tabular-nums;
+  }
+
+  /* Main content area — always shows active list, or log when toggled */
+  .ai-body { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+  #ai-active-list {
+    flex: 1; overflow-y: auto; padding: 4px 8px;
+  }
+  .ai-empty {
+    padding: 36px 12px; text-align: center; color: #484f58;
+    font-size: 11px; line-height: 1.6;
+  }
+  .ai-empty-icon { font-size: 20px; opacity: 0.4; margin-bottom: 6px; }
+
+  .ai-thread-card {
+    padding: 9px 11px; margin: 4px 0;
+    background: #161b22; border: 1px solid #21262d; border-radius: 6px;
+    transition: border-color 0.15s;
+  }
+  .ai-thread-card:hover { border-color: #30363d; }
   .ai-tc-header {
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 11px; margin-bottom: 2px;
+    font-size: 12px; margin-bottom: 3px;
   }
-  .ai-tc-name { color: #c9d1d9; font-weight: 600; }
-  .ai-tc-countdown { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
-  .ai-tc-msg { font-size: 10px; color: #8b949e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
-  .ai-tc-bar-track { height: 3px; background: #21262d; border-radius: 2px; overflow: hidden; }
-  .ai-tc-bar { height: 100%; border-radius: 2px; transition: width 1s linear; }
+  .ai-tc-name { color: #c9d1d9; font-weight: 500; }
+  .ai-tc-countdown {
+    font-weight: 600; font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ai-tc-msg {
+    font-size: 11px; color: #6e7681;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 6px;
+  }
+  .ai-tc-bar-track { height: 2px; background: #21262d; border-radius: 1px; overflow: hidden; }
+  .ai-tc-bar { height: 100%; transition: width 1s linear; }
+
+  /* Log — hidden by default, shown when log button active */
   #ai-log {
-    flex: 1; overflow-y: auto; padding: 8px 12px;
+    display: none; flex: 1; overflow-y: auto; padding: 8px 12px;
     font-size: 11px; color: #8b949e; line-height: 1.7;
   }
-  .ai-log-line { border-bottom: 1px solid #21262d11; padding: 2px 0; }
-  .ai-log-ts { color: #6e7681; font-size: 10px; }
-  .ai-settings-bar {
-    padding: 4px 12px; flex-shrink: 0; border-bottom: 1px solid #21262d;
-    display: flex; gap: 6px; align-items: center;
+  #ai-log.show { display: block; }
+  #ai-log:empty::before {
+    content: 'Chưa có hoạt động';
+    color: #484f58; font-style: italic;
   }
+  .ai-log-line { padding: 3px 0; border-bottom: 1px solid rgba(33, 38, 45, 0.4); }
+  .ai-log-line:last-child { border-bottom: none; }
+  .ai-log-ts { color: #484f58; font-size: 10px; margin-right: 6px; }
+  .ai-log-line.debug { color: #6e7681; }
+  .ai-log-line.event { color: #58a6ff; }
+  .ai-log-line.tool { color: #d29922; }
+  .ai-log-line.ok { color: #3fb950; }
+  .ai-log-line.err { color: #f85149; }
+  .ai-log-details {
+    display: block; margin-top: 3px;
+    background: #0d1117; border: 1px solid #21262d; border-radius: 4px;
+    padding: 6px 8px; font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 10.5px; color: #c9d1d9; white-space: pre-wrap;
+    word-break: break-word; max-height: 240px; overflow-y: auto;
+    line-height: 1.4;
+  }
+  .ai-log-collapse {
+    display: inline-block; cursor: pointer; user-select: none;
+    color: #58a6ff; font-size: 10px; margin-left: 4px;
+  }
+  .ai-log-collapse:hover { text-decoration: underline; }
+  .ai-log-details.collapsed { display: none; }
 </style>
 </head>
 <body>
@@ -569,65 +840,114 @@
       <span class="peer-name" id="chat-peer-name">—</span>
       <span class="peer-id" id="chat-peer-id"></span>
       <button id="btn-chat-refresh" style="margin-left:auto; font-size:10px; padding:3px 7px;">↻</button>
+      <button id="stego-menu-btn" title="Cài đặt khoá mặc định" style="font-size:11px; padding:3px 7px;">⚙</button>
     </div>
+
+    <!-- Settings panel — mật khẩu mặc định (xổ ra khi bấm ⚙) -->
+    <div id="stego-settings-panel">
+      <div>
+        <label>Khoá mặc định</label>
+        <div class="ai-apikey-wrap">
+          <input type="password" id="stego-default-pw" placeholder="Nhập khoá hay dùng..." />
+          <button type="button" class="ai-apikey-eye" id="stego-default-pw-eye" title="Hiện / ẩn">👁</button>
+        </div>
+      </div>
+      <div class="stego-row">
+        <button class="primary" id="stego-save-settings">💾 Lưu</button>
+        <span id="stego-save-status" style="font-size:10.5px;color:#6e7681;align-self:center;"></span>
+      </div>
+    </div>
+
     <div id="chat-messages"></div>
     <div id="chat-input-bar">
       <textarea id="chat-input" rows="1" placeholder="Nhập tin nhắn..."></textarea>
       <button id="chat-send" disabled>Gửi</button>
+      <!-- Icon 🔒 nổi lên khi hover nút Gửi -->
+      <div id="stego-hover-icon" title="Soạn tin ẩn">🔒</div>
+    </div>
+
+    <!-- Popup tin ẩn (nổi khi click 🔒) -->
+    <div id="stego-compose-popup">
+      <div style="font-size:11px;font-weight:600;color:#c4b5fd;margin-bottom:8px;">🔒 Soạn tin ẩn</div>
+      <textarea id="stego-hidden" rows="2" placeholder="Nội dung sẽ nhúng vào tin gửi đi..."></textarea>
+      <input type="password" id="stego-password" placeholder="Khoá (để trống = dùng khoá mặc định)" style="margin-top:6px;" />
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="primary" id="stego-compose-ok">OK</button>
+        <button id="stego-compose-clear">Xoá tin ẩn</button>
+      </div>
+      <div id="stego-compose-status" style="font-size:10.5px;color:#6e7681;margin-top:6px;"></div>
     </div>
   </div>
 
   <!-- Tab: AI Auto-Reply -->
   <div class="tab-panel" id="ai-panel">
-    <div class="ai-header">
-      <button id="ai-toggle" class="ai-toggle-btn">▶ BẬT</button>
-      <span id="ai-toggle-label" style="font-size:11px;color:#8b949e;">Đã tắt</span>
-      <span style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+    <!-- Hero: 1 hàng duy nhất -->
+    <div class="ai-hero">
+      <button id="ai-toggle" class="ai-toggle-btn">▶ <span id="ai-toggle-label">BẬT</span></button>
+      <span class="ai-status">
         <span class="ai-dot off" id="ai-status-dot"></span>
-        <span id="ai-status-text" style="font-size:10px;color:#8b949e;">Không hoạt động</span>
+        <span id="ai-status-text">Không hoạt động</span>
       </span>
     </div>
-    <div class="ai-settings-bar">
-      <button id="ai-toggle-settings" style="font-size:11px; padding:3px 10px;">⚙ Cài đặt</button>
+
+    <!-- Action row: chỉ 2 nút thu gọn -->
+    <div class="ai-actions">
+      <button class="ai-icon-btn" id="ai-toggle-settings">⚙ Cài đặt</button>
+      <button class="ai-icon-btn" id="ai-toggle-log">
+        ☰ Nhật ký
+      </button>
+      <span style="margin-left:auto;font-size:11px;color:#6e7681;align-self:center;">
+        <span id="ai-active-count">0</span> đang chờ
+      </span>
     </div>
+
+    <!-- Settings (ẩn mặc định) -->
     <div id="ai-settings">
-      <div>
-        <label>System Prompt (AI đóng vai bạn)</label>
+      <div class="ai-field">
+        <label>System prompt</label>
         <textarea id="ai-system-prompt" rows="3">Bạn là tôi, hãy trả lời tin nhắn thay tôi. Trả lời ngắn gọn, tự nhiên, thân thiện như đang nhắn tin với bạn bè. Dùng tiếng Việt. Không cần giải thích dài dòng.</textarea>
       </div>
-      <div class="ai-setting-row">
-        <div>
+      <div class="ai-field">
+        <label>API key</label>
+        <div class="ai-apikey-wrap">
+          <input type="password" id="ai-api-key" value="" placeholder="sk-..." />
+          <button type="button" class="ai-apikey-eye" id="ai-apikey-eye" title="Hiện / ẩn">👁</button>
+        </div>
+      </div>
+      <div class="ai-grid-2">
+        <div class="ai-field">
           <label>Model</label>
           <select id="ai-model"></select>
         </div>
-        <div>
-          <label>Max Tokens</label>
+        <div class="ai-field">
+          <label>Max tokens</label>
           <input type="number" id="ai-max-tokens" value="512" min="50" max="4096" step="50" />
         </div>
       </div>
-      <div class="ai-setting-row">
-        <div style="flex:2">
-          <label>API Key</label>
-          <input type="password" id="ai-api-key" value="" />
-        </div>
-        <div style="flex:1">
-          <label>Temp: <span id="ai-temp-val">0.7</span></label>
-          <input type="range" id="ai-temp" min="0" max="2" step="0.1" value="0.7" style="width:100%;accent-color:#8b5cf6;" />
+      <div class="ai-field">
+        <label>Temperature</label>
+        <div class="ai-temp-row">
+          <input type="range" id="ai-temp" min="0" max="2" step="0.1" value="0.7" />
+          <span class="ai-temp-val" id="ai-temp-val">0.7</span>
         </div>
       </div>
-      <div class="ai-setting-row">
-        <div>
+      <div class="ai-grid-2">
+        <div class="ai-field">
           <label>Thời gian chờ (giây)</label>
           <input type="number" id="ai-delay" value="30" min="5" max="300" step="5" />
         </div>
-        <div>
-          <label>Context (số tin)</label>
-          <input type="number" id="ai-context-size" value="10" min="3" max="30" step="1" />
+        <div class="ai-field">
+          <label>Context (tin ban đầu, AI có thể fetch thêm tối đa 100)</label>
+          <input type="number" id="ai-context-size" value="10" min="3" max="100" step="1" />
         </div>
       </div>
     </div>
-    <div id="ai-active-list"></div>
-    <div id="ai-log"></div>
+
+    <!-- Body: active list mặc định, log toggle -->
+    <div class="ai-body">
+      <div id="ai-active-list"></div>
+      <div id="ai-log"></div>
+    </div>
   </div>
 
 </div>
@@ -659,8 +979,29 @@
   </div>
 </div>
 
+<!-- Stego decode modal -->
+<div id="stego-modal-bg">
+  <div id="stego-modal">
+    <h3 id="stego-modal-title">🔒 Giải mã tin ẩn</h3>
+    <div id="stego-modal-password-wrap">
+      <label>Mật khẩu (nếu tin được mã hoá)</label>
+      <input type="password" id="stego-modal-password" placeholder="Để trống nếu không có" />
+    </div>
+    <div>
+      <label>Nội dung tin ẩn</label>
+      <div class="stego-modal-result" id="stego-modal-result"></div>
+    </div>
+    <div class="stego-modal-actions">
+      <button id="stego-modal-decode" class="primary">🔓 Giải mã</button>
+      <button id="stego-modal-close">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<script src="stego.js"></script>
 <script src="panel.js"></script>
 <script src="panel-tabs.js"></script>
+<script src="panel-stego.js"></script>
 <script src="panel-ai.js"></script>
 </body>
 </html>

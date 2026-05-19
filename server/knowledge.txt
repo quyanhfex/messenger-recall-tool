@@ -2,7 +2,7 @@
 
 Facebook định danh "thiết bị mới" bằng một non-extractable CryptoKey lưu trong IndexedDB.
 
-Database: recovery_code_v1_100092675494108
+Database: recovery_code_v1_<USER_ID>
 Store: _worm_ear_
 Record: { clientKey: CryptoKey (non-extractable), salt: CryptoKey (non-extractable), keyHash, expiration, version }
 
@@ -25,7 +25,7 @@ Giải pháp cho server (Playwright):
 
 == Signal Keys ==
 
-IndexedDB: messenger_web_signal_v3_100092675494108
+IndexedDB: messenger_web_signal_v3_<USER_ID>
 Stores: session, identity, prekey, signedPrekey, meta, senderKeySessions, personalSenderKeyStatuses
 
 - Tất cả records đều có _encryptedContent: {} khi đọc ra JSON

@@ -365,7 +365,15 @@ function renderList() {
       text.textContent = '📞 ' + m.text;
       text.title = 'Cuộc gọi không thể thu hồi cho người khác';
     } else if (m.text) {
-      text.textContent = m.text;
+      // Nếu có stego payload → hiển thị phần visible, gắn icon 🔒
+      if (window.StegoPanel && window.StegoPanel.hasHidden(m.text)) {
+        const magicIdx = m.text.indexOf('‌​‌​');
+        const visible = magicIdx >= 0 ? m.text.slice(0, magicIdx) : m.text;
+        text.textContent = visible || '·';
+        window.StegoPanel.attachLockIcon(text, m.text);
+      } else {
+        text.textContent = m.text;
+      }
     } else {
       text.classList.add('empty');
       text.textContent = '[không giải mã được]';
@@ -1535,7 +1543,15 @@ function chatAddBubble(text, isMine, senderName, ts, state) {
 
   const bubble = document.createElement('div');
   bubble.className = 'chat-bubble' + (state === 'pending' ? ' pending' : state === 'error' ? ' error' : '');
-  bubble.textContent = text;
+  // Stego: hiện phần visible + icon 🔒 nếu có payload ẩn
+  if (window.StegoPanel && window.StegoPanel.hasHidden(text)) {
+    const magicIdx = text.indexOf('‌​‌​');
+    const visible = magicIdx >= 0 ? text.slice(0, magicIdx) : text;
+    bubble.textContent = visible || '·';
+    window.StegoPanel.attachLockIcon(bubble, text);
+  } else {
+    bubble.textContent = text;
+  }
   wrap.appendChild(bubble);
 
   if (ts) {
@@ -1614,15 +1630,28 @@ async function loadChatPeer() {
 
 async function doSendChat() {
   const text = $chatInput.value.trim();
-  if (!text) return;
+  const hasHidden = window.StegoPanel && window.StegoPanel.hasHiddenPending();
+  if (!text && !hasHidden) return;
   $chatInput.value = '';
   $chatInput.style.height = '';
   $chatSend.disabled = true;
 
-  const bubble = chatAddBubble(text, true, null, Date.now(), 'pending');
+  // Nhúng tin ẩn vào nếu có
+  let textToSend = text;
+  if (window.StegoPanel) {
+    try {
+      textToSend = await window.StegoPanel.wrapOutgoing(text);
+    } catch (e) {
+      $chatSend.disabled = false;
+      return;
+    }
+  }
+
+  // Bubble vẫn hiển thị text gốc (visible) cho UX rõ ràng
+  const bubble = chatAddBubble(text || '🔒 (chỉ có tin ẩn)', true, null, Date.now(), 'pending');
   const chatThreadKey = selectedChatThreadKey || currentThreadKey;
   try {
-    const resp = await rpc('sendMessage', { text, threadKey: chatThreadKey });
+    const resp = await rpc('sendMessage', { text: textToSend, threadKey: chatThreadKey });
     if (resp.ok && resp.result && resp.result.success !== false) {
       bubble.classList.remove('pending');
     } else {

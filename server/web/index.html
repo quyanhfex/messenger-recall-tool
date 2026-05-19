@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Messenger Recall — Control Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🤖 Messenger Recall</h1>
+    <div class="header-actions">
+      <button id="btn-config">⚙ Server</button>
+      <button id="btn-refresh">↻ Refresh</button>
+      <button id="btn-add" class="primary">+ Thêm account</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="accounts-list">
+      <div class="empty">Chưa có account. Bấm <b>Thêm account</b> để bắt đầu.</div>
+    </div>
+  </main>
+
+  <!-- Modal: Add account -->
+  <div id="modal-add" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Thêm account</h2>
+        <button class="modal-close" data-close="modal-add">×</button>
+      </div>
+      <div class="modal-body">
+        <label>Paste JSON từ extension cookie-injector:</label>
+        <textarea id="add-input" placeholder='{"cookies":[...],"pinCode":"123456"}' rows="12"></textarea>
+        <div id="add-hint" class="hint">Chờ input...</div>
+      </div>
+      <div class="modal-footer">
+        <button data-close="modal-add">Huỷ</button>
+        <button id="add-confirm" class="primary" disabled>Thêm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Server config -->
+  <div id="modal-config" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Cấu hình Server (VPS)</h2>
+        <button class="modal-close" data-close="modal-config">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-row">
+          <label>API Base URL</label>
+          <input id="cfg-api-base" placeholder="https://api.yourdomain.com (trống = same-origin)">
+          <div class="hint">URL của VPS C. Để trống nếu Web A serve từ cùng VPS.</div>
+        </div>
+        <div class="field-row">
+          <label>API Key (X-API-Key header)</label>
+          <input id="cfg-api-key" type="password" placeholder="(để trống nếu server không bật auth)">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button data-close="modal-config">Huỷ</button>
+        <button id="cfg-save" class="primary">Lưu & Reload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: AI config -->
+  <div id="modal-ai" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Cấu hình AI — <span id="ai-acc-id"></span></h2>
+        <button class="modal-close" data-close="modal-ai">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-row">
+          <label>API key DeepInfra</label>
+          <input type="password" id="ai-api-key" placeholder="(để trống = dùng key của server)">
+        </div>
+        <div class="field-row">
+          <label>Model</label>
+          <select id="ai-model">
+            <option value="google/gemma-4-26B-A4B-it">Gemma 4 26B (nhanh)</option>
+            <option value="meta-llama/Meta-Llama-3.1-70B-Instruct">Llama 3.1 70B</option>
+            <option value="meta-llama/Meta-Llama-3.1-8B-Instruct">Llama 3.1 8B (siêu nhanh)</option>
+            <option value="Qwen/Qwen3-235B-A22B">Qwen 3 235B</option>
+            <option value="mistralai/Mistral-Small-24B-Instruct-2501">Mistral Small 24B</option>
+            <option value="deepseek-ai/DeepSeek-V3">DeepSeek V3</option>
+          </select>
+        </div>
+        <div class="field-row two">
+          <div>
+            <label>Temperature</label>
+            <input type="number" id="ai-temp" min="0" max="2" step="0.1" value="0.7">
+          </div>
+          <div>
+            <label>Max tokens</label>
+            <input type="number" id="ai-max-tokens" min="50" max="2048" value="512">
+          </div>
+        </div>
+        <div class="field-row two">
+          <div>
+            <label>Delay (giây)</label>
+            <input type="number" id="ai-delay" min="0" max="600" value="30">
+          </div>
+          <div>
+            <label>Context size</label>
+            <input type="number" id="ai-context-size" min="5" max="100" value="20">
+          </div>
+        </div>
+        <div class="field-row">
+          <label>System prompt</label>
+          <textarea id="ai-system-prompt" rows="5"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button data-close="modal-ai">Huỷ</button>
+        <button id="ai-save" class="primary">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

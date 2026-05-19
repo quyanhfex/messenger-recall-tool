@@ -1,53 +1,57 @@
 import { chromium } from 'playwright';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, rmSync, mkdtempSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { tmpdir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const cookies = JSON.parse(readFileSync(join(__dirname, 'cookies.json'), 'utf-8'));
-const injectorCode = readFileSync(join(__dirname, '../injector.js'), 'utf-8');
-const signalKeys = JSON.parse(readFileSync(join(__dirname, 'signal_keys_decrypted.json'), 'utf-8'));
 
-const THREAD_ID = 'YOUR_THREAD_ID';
-const threadIdAtMsgr = 'YOUR_USER_ID@msgr';
-const DB_NAME = 'messenger_web_signal_v3_YOUR_FB_UID';
-const PROFILE_DIR = join(__dirname, 'playwright-profile');
-const isFirstRun = !existsSync(join(PROFILE_DIR, 'Default', 'IndexedDB'));
+// Đọc session-input.json (paste từ extension cookie-injector)
+const sessionPath = join(__dirname, 'session-input.json');
+const sessionRaw = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+
+// Hỗ trợ cả format cũ (array cookies) lẫn format mới { cookies, pinCode }
+const cookiesRaw = Array.isArray(sessionRaw) ? sessionRaw : sessionRaw.cookies;
+const PIN_CODE = sessionRaw.pinCode;
+if (!Array.isArray(cookiesRaw) || cookiesRaw.length === 0) throw new Error('cookies rỗng trong session-input.json');
+if (!PIN_CODE || PIN_CODE.length !== 6) throw new Error('pinCode phải 6 chữ số');
+
+// Normalize sang format Playwright
+const SAMESITE_MAP = { 'no_restriction': 'None', 'lax': 'Lax', 'strict': 'Strict' };
+const cookies = cookiesRaw.map(c => ({
+  name: c.name,
+  value: c.value,
+  domain: c.domain || '.facebook.com',
+  path: c.path || '/',
+  httpOnly: c.httpOnly || false,
+  secure: c.secure !== undefined ? c.secure : true,
+  sameSite: SAMESITE_MAP[c.sameSite?.toLowerCase()] || c.sameSite || 'None',
+}));
+
+const injectorCode = readFileSync(join(__dirname, '../injector.js'), 'utf-8');
+
+const THREAD_ID = process.env.THREAD_ID || '<REPLACE_WITH_THREAD_ID>';
+const threadIdAtMsgr = THREAD_ID + '@msgr';
+
+// Profile trắng — mỗi run 1 dir tmp, xóa sau khi xong
+const PROFILE_DIR = mkdtempSync(join(tmpdir(), 'mr-profile-'));
+console.log(`Profile tạm: ${PROFILE_DIR}`);
 
 (async () => {
-  const ctx = await chromium.launchPersistentContext(
-    PROFILE_DIR,
-    { headless: true }
-  );
+  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, { headless: true });
 
-  if (isFirstRun) {
-    console.log('Lần đầu chạy — inject cookies...');
-    await ctx.addCookies(cookies);
-  }
-
-  // Inject decrypted signal keys trước khi Messenger load
-  await ctx.addInitScript(({ dbName, keys }) => {
-    const _open = indexedDB.open.bind(indexedDB);
-    indexedDB.open = function(name, version) {
-      const req = _open(name, version);
-      if (name !== dbName) return req;
-      req.addEventListener('success', async () => {
-        const db = req.result;
-        for (const [storeName, records] of Object.entries(keys)) {
-          if (!records.length) continue;
-          try {
-            const tx = db.transaction(storeName, 'readwrite');
-            const store = tx.objectStore(storeName);
-            for (const { key, value } of records) store.put(value, key);
-          } catch(_) {}
-        }
-        console.log('[MR] decrypted signal keys injected');
-      }, { once: true });
-      return req;
-    };
-  }, { dbName: DB_NAME, keys: signalKeys });
+  console.log(`Inject ${cookies.length} cookies...`);
+  await ctx.addCookies(cookies);
 
   const page = ctx.pages()[0] ?? await ctx.newPage();
+
+  // Forward browser console về terminal (chỉ log có [HOOK] để giảm noise)
+  page.on('console', (msg) => {
+    const txt = msg.text();
+    if (txt.includes('[HOOK]') || txt.includes('[MR]')) {
+      console.log('[browser]', txt);
+    }
+  });
 
   console.log('Mở Messenger...');
   await page.goto(`https://www.facebook.com/messages/t/${THREAD_ID}`, {
@@ -55,18 +59,62 @@ const isFirstRun = !existsSync(join(PROFILE_DIR, 'Default', 'IndexedDB'));
     timeout: 30000,
   });
 
-  console.log('Đợi window.require...');
-  await page.waitForFunction(() => typeof window.require === 'function', { timeout: 30000 });
-  console.log('window.require OK');
+  // ===== Auto-fill PIN qua DOM (sau 10s để Messenger render dialog) =====
+  console.log('Đợi 10s để Messenger load và render dialog PIN...');
+  await page.waitForTimeout(5000);
+
+  console.log(`🔐 Auto-fill PIN qua DOM...`);
+  const filled = await page.evaluate((pin) => {
+    const inputs = Array.from(document.querySelectorAll(
+      'input[autocomplete="one-time-code"], input[inputmode="numeric"], input[type="tel"], input[maxlength="1"]'
+    ));
+    if (inputs.length === 0) return { ok: false, reason: 'no_input' };
+
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    if (inputs.length === 1) {
+      setter.call(inputs[0], pin);
+      inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+      inputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      for (let i = 0; i < Math.min(inputs.length, pin.length); i++) {
+        setter.call(inputs[i], pin[i]);
+        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+        inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+        inputs[i].dispatchEvent(new KeyboardEvent('keydown', { key: pin[i], bubbles: true }));
+        inputs[i].dispatchEvent(new KeyboardEvent('keyup', { key: pin[i], bubbles: true }));
+      }
+    }
+    return { ok: true, inputCount: inputs.length };
+  }, PIN_CODE);
+
+  if (!filled.ok) {
+    console.log(`ℹ️ Không có dialog PIN (${filled.reason}) — profile có thể đã verified, tiếp tục`);
+  } else {
+    console.log(`✅ PIN đã bơm vào ${filled.inputCount} input. Đợi 5s để FB verify...`);
+    await page.waitForTimeout(5000);
+
+    // Check kết quả — dialog PIN biến mất = success, còn = lỗi
+    const stillVisible = await page.evaluate(() => {
+      return !!document.querySelector('input[autocomplete="one-time-code"], input[maxlength="1"]');
+    });
+    if (stillVisible) {
+      // Check thêm text báo lỗi
+      const errorTxt = await page.evaluate(() => {
+        const txt = document.body.innerText || '';
+        const m = txt.match(/(incorrect|sai|wrong|không đúng)[^\n]*?(pin|mã)/i);
+        return m ? m[0] : null;
+      });
+      if (errorTxt) {
+        throw new Error('INCORRECT_PIN_CODE — ' + errorTxt + '. Export lại với PIN đúng.');
+      }
+      console.log('⚠️ Dialog PIN vẫn còn nhưng không có text báo sai — có thể đang verify, tiếp tục thử');
+    } else {
+      console.log('✅ Dialog PIN đã biến mất — verified');
+    }
+  }
 
   await page.evaluate(injectorCode);
   console.log('Injector loaded');
-
-  if (isFirstRun) {
-    console.log('Đợi 20s để nhập PIN...');
-    await new Promise(r => setTimeout(r, 20000));
-    console.log('Tiếp tục...');
-  }
 
   const result = await page.evaluate(async (threadId) => {
     const bridge = window.require('MAWBridgeSendAndReceive');
@@ -91,28 +139,13 @@ const isFirstRun = !existsSync(join(PROFILE_DIR, 'Default', 'IndexedDB'));
   console.log('success:', result.success, 'msgCount:', result.msgCount);
   result.messages.forEach(m => console.log(`[${m.ts}] ${m.senderId}: ${m.text}`));
 
-  // Export IndexedDB sau khi nhập PIN — keys đã decrypted
-  console.log('Đang export signal keys...');
-  const exported = await page.evaluate(async (dbName) => {
-    const db = await new Promise((res, rej) => {
-      const r = indexedDB.open(dbName);
-      r.onsuccess = e => res(e.target.result);
-      r.onerror = rej;
-    });
-    const storeNames = ['session', 'identity', 'prekey', 'signedPrekey', 'meta', 'senderKeySessions', 'personalSenderKeyStatuses'];
-    const out = {};
-    for (const name of storeNames) {
-      const [records, keys] = await Promise.all([
-        new Promise(res => { const tx = db.transaction(name, 'readonly'); const r = tx.objectStore(name).getAll(); r.onsuccess = e => res(e.target.result); }),
-        new Promise(res => { const tx = db.transaction(name, 'readonly'); const r = tx.objectStore(name).getAllKeys(); r.onsuccess = e => res(e.target.result); }),
-      ]);
-      out[name] = keys.map((k, i) => ({ key: k, value: records[i] }));
-    }
-    return out;
-  }, DB_NAME);
-
-  writeFileSync(join(__dirname, 'signal_keys_decrypted.json'), JSON.stringify(exported));
-  console.log('Đã lưu signal_keys_decrypted.json');
-
   await ctx.close();
+
+  // Cleanup profile tạm
+  try {
+    rmSync(PROFILE_DIR, { recursive: true, force: true });
+    console.log(`Đã xóa profile tạm: ${PROFILE_DIR}`);
+  } catch (e) {
+    console.warn(`⚠️ Không xóa được profile tạm ${PROFILE_DIR}:`, e.message);
+  }
 })();

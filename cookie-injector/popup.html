@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 320px;
+      font-family: -apple-system, 'Segoe UI', sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      font-size: 13px;
+      overflow: hidden;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px;
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      color: #8b949e; cursor: pointer;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.3px;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: #c9d1d9; background: #21262d; }
+    .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+    /* Panels */
+    .panel { display: none; padding: 16px; flex-direction: column; gap: 12px; }
+    .panel.active { display: flex; }
+
+    /* Button */
+    .btn {
+      width: 100%; padding: 9px;
+      border: 1px solid #30363d; border-radius: 6px;
+      background: #21262d; color: #c9d1d9;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn:hover { background: #30363d; }
+    .btn.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .btn.primary:hover { background: #388bfd; }
+    .btn.success { background: #238636; border-color: #2ea043; color: #fff; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Status */
+    .status {
+      font-size: 11px; color: #8b949e;
+      min-height: 16px; text-align: center;
+      transition: color 0.2s;
+    }
+    .status.ok { color: #3fb950; }
+    .status.err { color: #f85149; }
+
+    /* Export tab */
+    .export-desc {
+      font-size: 11px; color: #8b949e; line-height: 1.6;
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 6px; padding: 10px;
+    }
+    .export-desc b { color: #c9d1d9; }
+
+    /* Cookie preview */
+    #cookie-preview {
+      display: none;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      padding: 8px 10px; font-family: 'Consolas', monospace;
+      font-size: 10px; color: #3fb950;
+      max-height: 120px; overflow-y: auto;
+      line-height: 1.6;
+      animation: fadeIn 0.25s ease;
+    }
+    #cookie-preview.show { display: block; }
+
+    /* Inject tab — textarea */
+    .field-label {
+      font-size: 10px; color: #6e7681;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      font-weight: 600;
+    }
+    #cookie-input {
+      width: 100%;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      color: #c9d1d9; padding: 8px 10px;
+      font-size: 11px; font-family: 'Consolas', monospace;
+      resize: vertical; min-height: 80px; max-height: 160px;
+      line-height: 1.5;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      /* Slide in animation */
+      animation: slideDown 0.25s ease;
+    }
+    #cookie-input:focus {
+      outline: none;
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+    }
+    #cookie-input.valid { border-color: #2ea043; }
+    #cookie-input.invalid { border-color: #f85149; }
+
+    /* PIN input */
+    #pin-input {
+      width: 100%;
+      background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      color: #c9d1d9; padding: 9px 10px;
+      font-size: 16px; font-family: 'Consolas', monospace;
+      letter-spacing: 6px; text-align: center;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #pin-input:focus {
+      outline: none;
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+    }
+    #pin-input.valid { border-color: #2ea043; }
+    #pin-input.invalid { border-color: #f85149; }
+
+    .parse-hint {
+      font-size: 10px; color: #6e7681;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .parse-hint.ok { color: #3fb950; }
+    .parse-hint.err { color: #f85149; }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+      to   { opacity: 1; max-height: 160px; }
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.5; }
+    }
+    .loading { animation: pulse 1s ease-in-out infinite; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="export">📤 Export</button>
+  <button class="tab-btn" data-tab="inject">💉 Inject</button>
+</div>
+
+<!-- Tab: Export -->
+<div class="panel active" id="tab-export">
+  <div class="export-desc">
+    Nhập <b>mã PIN E2EE</b> (6 chữ số) rồi bấm Export. Cookies + PIN sẽ được copy vào clipboard.
+  </div>
+  <div class="field-label">Mã PIN E2EE</div>
+  <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="off">
+  <div class="parse-hint" id="pin-hint">Nhập 6 chữ số</div>
+  <button class="btn primary" id="btn-export" disabled>📋 Export &amp; Copy</button>
+  <div id="cookie-preview"></div>
+  <div class="status" id="export-status"></div>
+</div>
+
+<!-- Tab: Inject -->
+<div class="panel" id="tab-inject">
+  <div class="field-label">Paste JSON cookies vào đây</div>
+  <textarea id="cookie-input" placeholder='[{"name":"c_user","value":"..."},...]'></textarea>
+  <div class="parse-hint" id="parse-hint">Chờ input...</div>
+  <button class="btn success" id="btn-inject" disabled>🚀 Start Inject</button>
+  <div class="status" id="inject-status"></div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

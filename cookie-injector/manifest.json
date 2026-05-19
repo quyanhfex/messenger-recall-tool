@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "FB Cookie Injector",
+  "version": "1.0",
+  "permissions": ["cookies", "tabs"],
+  "host_permissions": ["https://*.facebook.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FB Cookie Injector"
+  }
+}

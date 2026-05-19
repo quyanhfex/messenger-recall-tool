@@ -29,6 +29,7 @@ const $aiToggleSettings = el('ai-toggle-settings');
 const $aiSystemPrompt = el('ai-system-prompt');
 const $aiModel = el('ai-model');
 const $aiApiKey = el('ai-api-key');
+const $aiApiKeyEye = el('ai-apikey-eye');
 const $aiTemp = el('ai-temp');
 const $aiTempVal = el('ai-temp-val');
 const $aiMaxTokens = el('ai-max-tokens');
@@ -37,7 +38,9 @@ const $aiContextSize = el('ai-context-size');
 const $aiStatusDot = el('ai-status-dot');
 const $aiStatusText = el('ai-status-text');
 const $aiActiveList = el('ai-active-list');
+const $aiActiveCount = el('ai-active-count');
 const $aiLog = el('ai-log');
+const $aiToggleLog = el('ai-toggle-log');
 
 // ---- Init models dropdown ----
 AI_MODELS.forEach(m => {
@@ -49,10 +52,30 @@ AI_MODELS.forEach(m => {
 
 // ---- Settings toggle ----
 $aiToggleSettings.addEventListener('click', () => {
-  $aiSettingsPanel.classList.toggle('open');
-  $aiToggleSettings.textContent = $aiSettingsPanel.classList.contains('open') ? '⚙ Ẩn cài đặt' : '⚙ Cài đặt';
+  const isOpen = $aiSettingsPanel.classList.toggle('open');
+  $aiToggleSettings.classList.toggle('active', isOpen);
 });
-$aiTemp.addEventListener('input', () => { $aiTempVal.textContent = $aiTemp.value; });
+
+// ---- Log toggle ----
+$aiToggleLog.addEventListener('click', () => {
+  const showingLog = $aiLog.classList.toggle('show');
+  $aiToggleLog.classList.toggle('active', showingLog);
+  $aiActiveList.style.display = showingLog ? 'none' : '';
+});
+
+// ---- Temp slider live ----
+$aiTemp.addEventListener('input', () => {
+  $aiTempVal.textContent = $aiTemp.value;
+});
+
+// ---- API key eye toggle ----
+if ($aiApiKeyEye) {
+  $aiApiKeyEye.addEventListener('click', () => {
+    const showing = $aiApiKey.type === 'text';
+    $aiApiKey.type = showing ? 'password' : 'text';
+    $aiApiKeyEye.textContent = showing ? '👁' : '🙈';
+  });
+}
 
 // ---- Toggle ON/OFF ----
 $aiToggle.addEventListener('click', () => {
@@ -61,15 +84,15 @@ $aiToggle.addEventListener('click', () => {
 
 function updateToggleUI() {
   if (aiEnabled) {
-    $aiToggle.textContent = '⏸ TẮT';
+    $aiToggle.firstChild.textContent = '⏸ ';
+    $aiToggleLabel.textContent = 'TẮT';
     $aiToggle.className = 'ai-toggle-btn active';
-    $aiToggleLabel.textContent = 'Đang hoạt động';
     $aiStatusDot.className = 'ai-dot on';
-    $aiStatusText.textContent = 'Theo dõi tất cả thread — chờ tin mới...';
+    $aiStatusText.textContent = 'Đang theo dõi tin mới';
   } else {
-    $aiToggle.textContent = '▶ BẬT';
+    $aiToggle.firstChild.textContent = '▶ ';
+    $aiToggleLabel.textContent = 'BẬT';
     $aiToggle.className = 'ai-toggle-btn';
-    $aiToggleLabel.textContent = 'Đã tắt';
     $aiStatusDot.className = 'ai-dot off';
     $aiStatusText.textContent = 'Không hoạt động';
   }
@@ -226,8 +249,14 @@ function getSenderName(senderId) {
 
 // ---- Render active countdowns UI ----
 function renderActiveList() {
+  if ($aiActiveCount) $aiActiveCount.textContent = aiThreads.size;
+
   if (!aiThreads.size) {
-    $aiActiveList.innerHTML = '<div style="color:#6e7681;font-size:11px;padding:8px 12px;">Chưa có tin nhắn chờ xử lý</div>';
+    $aiActiveList.innerHTML = `
+      <div class="ai-empty">
+        <div class="ai-empty-icon">💤</div>
+        <div>Chưa có tin nhắn chờ xử lý</div>
+      </div>`;
     return;
   }
 
@@ -235,7 +264,7 @@ function renderActiveList() {
   for (const [jid, s] of aiThreads) {
     const pct = s.countdownTotal > 0 ? Math.max(0, (s.countdownLeft / s.countdownTotal) * 100) : 0;
     const statusIcon = s.isReplying ? '🤖' : (s.countdownLeft > 0 ? '⏳' : '✅');
-    const statusText = s.isReplying ? 'Đang trả lời...' : (s.countdownLeft > 0 ? s.countdownLeft + 's' : 'Đã trả lời');
+    const statusText = s.isReplying ? 'Đang trả lời…' : (s.countdownLeft > 0 ? s.countdownLeft + 's' : 'Đã trả lời');
     const barColor = s.countdownLeft > 10 ? '#8b5cf6' : (s.countdownLeft > 5 ? '#d29922' : '#f85149');
 
     html += `
@@ -251,11 +280,225 @@ function renderActiveList() {
   $aiActiveList.innerHTML = html;
 }
 
+// ============================================================
+// AI v2 — Decision engine, stego signature, tool calling, multi-msg
+// ============================================================
+
+// Fetch context tin nhắn từ bridge, normalize text
+async function fetchContext(threadKey, count) {
+  try {
+    const resp = await rpc('getRecentMessages', { threadKey, count });
+    if (resp.ok && Array.isArray(resp.result)) {
+      return resp.result.filter(m => m.text); // chỉ giữ tin có text
+    }
+  } catch (_) {}
+  return [];
+}
+
+// Models không support function calling — fallback prompt-only mode
+// Models DeepInfra không route tool_calls dù model gốc hỗ trợ
+const MODELS_NO_TOOLS = new Set([]);
+
+// Gọi LLM với optional tools (tự fallback nếu model không support)
+async function callLLM({ apiKey, model, temperature, maxTokens, messages, tools }) {
+  const body = { model, messages, temperature, max_tokens: maxTokens };
+  const useTools = tools && tools.length && !MODELS_NO_TOOLS.has(model);
+  if (useTools) {
+    body.tools = tools;
+    body.tool_choice = 'auto';
+  }
+  console.log('[AI callLLM] useTools=', useTools, 'model=', model, 'body keys=', Object.keys(body));
+  const resp = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const err = await resp.text();
+    // Auto-fallback: nếu lỗi do tools → retry không có tools
+    if (useTools && /tool|function/i.test(err)) {
+      delete body.tools;
+      delete body.tool_choice;
+      const retry = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!retry.ok) {
+        const err2 = await retry.text();
+        throw new Error('API ' + retry.status + ' (no-tools retry): ' + err2.slice(0, 200));
+      }
+      return retry.json();
+    }
+    throw new Error('API ' + resp.status + ': ' + err.slice(0, 200));
+  }
+  return resp.json();
+}
+
+
+const AI_SIGNATURE = 'AI'; // Plaintext payload nhúng vào mỗi tin AI gửi
+const MAX_CONTEXT_FETCH = 100;
+const MAX_TOOL_ROUNDS = 2;
+
+// Tool definition cho OpenAI function calling
+const AI_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'fetch_more_messages',
+      description: `Lấy thêm tin nhắn cũ hơn từ cuộc trò chuyện. Mặc định bạn có 10 tin gần nhất. Nếu tin nhắn hiện tại đề cập đến nội dung trước đó (vd: "hôm qua tao nói gì", "lúc nãy", "cái mày bảo lúc trước", "vụ kia thế nào"...), bạn PHẢI gọi tool này để lấy đủ ngữ cảnh trước khi trả lời.
+
+CÁCH DÙNG:
+- count = tổng số tin muốn có (KHÔNG phải số tin thêm). Vd count=50 nghĩa là load 50 tin gần nhất.
+- Tối thiểu 10, tối đa 100. Vượt 100 sẽ bị cap về 100.
+- Mỗi tin có timestamp [YYYY-MM-DD HH:MM] → bạn tự nhẩm để biết "hôm qua", "tuần trước"...
+- Bạn được gọi tool tối đa 2 lần / 1 lượt reply. Cân nhắc trước khi gọi.
+
+KHI NÀO KHÔNG CẦN GỌI:
+- Tin nhắn chỉ là greeting đơn giản ("hi", "alo", "ê").
+- Tin nhắn độc lập, không tham chiếu quá khứ.
+- 10 tin có sẵn đã đủ trả lời.`,
+      parameters: {
+        type: 'object',
+        properties: {
+          count: {
+            type: 'integer',
+            description: 'Tổng số tin muốn có sau khi load (không phải số tin thêm). Từ 10 đến 100.',
+            minimum: 10,
+            maximum: 100,
+          },
+        },
+        required: ['count'],
+      },
+    },
+  },
+];
+
+// Build system prompt với instruction về decision/multi-msg/signature
+// noTools=true → bỏ phần hướng dẫn tool, thay bằng fallback "không nhớ rõ"
+function buildSystemPrompt(userPrompt, noTools = false) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const toolSection = noTools
+    ? `═══ NGỮ CẢNH ═══
+
+Bạn chỉ có các tin nhắn gần nhất được cung cấp. Nếu người dùng hỏi về nội dung cũ hơn mà bạn không thấy trong lịch sử, hãy trả lời thật thà "tao không nhớ rõ / hôm đó nói gì tao quên mất rồi" thay vì bịa đặt.`
+    : `═══ TOOL fetch_more_messages ═══
+
+Mặc định bạn chỉ có 10 tin gần nhất. Nếu tin hiện tại đề cập tới nội dung cũ ("hôm qua", "tuần trước", "cái mày bảo lúc nãy", "vụ X thế nào rồi"...) mà 10 tin không đủ → BẮT BUỘC gọi tool fetch_more_messages.
+
+Quyết định tham khảo:
+• Họ hỏi "hôm qua" → fetch 50 tin
+• Họ hỏi "tuần trước" → fetch 100 tin
+• Họ hỏi "lúc nãy", "ban nãy" → fetch 30 tin
+• Tin trống không, độc lập (greeting, bye...) → KHÔNG cần fetch
+Tool gọi tối đa 2 lần / lượt — cân nhắc kỹ.`;
+
+  return `${userPrompt}
+
+═══ HƯỚNG DẪN HỆ THỐNG ═══
+
+Bạn đóng vai chủ tài khoản Messenger. Hôm nay là ${today}.
+
+Mỗi tin trong lịch sử được gắn nhãn:
+• [BẠN ĐÃ TỰ NHẮN] = chủ tài khoản tự gõ tay (không qua AI)
+• [AI ĐÃ NHẮN HỘ] = bạn (AI) đã trả lời thay chủ trước đó
+• [HỌ NHẮN] = người đối diện
+Mỗi tin có timestamp [YYYY-MM-DD HH:MM] → tự nhẩm để biết khoảng cách thời gian.
+
+${toolSection}
+
+═══ QUY TẮC REPLY ═══
+
+1. Họ chào tạm biệt ("bye", "ngủ ngon", "gặp sau"...) → decision="no_reply"
+2. [BẠN ĐÃ TỰ NHẮN] xuất hiện gần đây (chủ đang tự chat tay) → decision="no_reply"
+3. Tin spam/repeat (họ nhắn cùng câu nhiều lần) → decision="no_reply"
+4. Tin có ngữ cảnh rõ ràng → reply 1-3 tin tự nhiên
+
+═══ FORMAT OUTPUT (BẮT BUỘC) ═══
+
+Chỉ JSON thuần, KHÔNG markdown, KHÔNG \`\`\`json:
+
+{
+  "decision": "reply" | "no_reply",
+  "reason": "lý do ngắn gọn (1 câu)",
+  "messages": ["tin 1", "tin 2", "tin 3"]
+}
+
+• no_reply → messages = []
+• reply → messages có 1 đến 3 phần tử (mỗi phần tử gửi tách thành 1 bubble, cách nhau 1-3 giây)
+• Mỗi tin ngắn gọn, văn nói tự nhiên, không formal`;
+}
+
+// Format 1 message thành line context cho LLM
+function formatContextLine(m, myId) {
+  const ts = m.timestampMs ? new Date(m.timestampMs).toISOString().slice(0, 16).replace('T', ' ') : '?';
+  let label;
+  if (m.isMine) {
+    // Check stego signature để biết AI tự gửi hay chủ nhân tự nhắn
+    if (window.Stego && Stego.hasHidden(m.text || '')) {
+      label = '[AI ĐÃ NHẮN HỘ]';
+    } else {
+      label = '[BẠN ĐÃ TỰ NHẮN]';
+    }
+  } else {
+    label = '[HỌ NHẮN]';
+  }
+  // Strip stego chars khỏi text khi feed cho AI để không lẫn
+  let text = m.text || '';
+  if (window.Stego) {
+    const magicIdx = text.indexOf('‌​‌​');
+    if (magicIdx >= 0) text = text.slice(0, magicIdx);
+  }
+  return `[${ts}] ${label} ${text}`;
+}
+
+// Build messages array cho OpenAI API từ context tin nhắn
+function buildLLMMessages(context, systemPrompt, latestMsgText, noTools = false) {
+  const messages = [{ role: 'system', content: buildSystemPrompt(systemPrompt, noTools) }];
+  const historyLines = context.map(m => formatContextLine(m));
+  // Đảm bảo tin trigger luôn xuất hiện ở cuối — tránh trường hợp DB chưa cập nhật
+  const lastLine = historyLines[historyLines.length - 1] || '';
+  if (latestMsgText && !lastLine.includes(latestMsgText.slice(0, 20))) {
+    const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    historyLines.push(`[${now}] [HỌ NHẮN] ${latestMsgText}`);
+  }
+  const historyText = historyLines.join('\n');
+  messages.push({
+    role: 'user',
+    content: `Đây là lịch sử trò chuyện (mới nhất ở cuối):\n\n${historyText}\n\nHãy quyết định có nên trả lời không. Trả về JSON.`,
+  });
+  return messages;
+}
+
+// Parse JSON response từ LLM (tolerant với markdown wrapper)
+function parseAiDecision(raw) {
+  if (!raw) return null;
+  let s = raw.replace(/^<think>[\s\S]*?<\/think>\s*/i, '').trim();
+  // Strip markdown code fence nếu có
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  // Tìm JSON object đầu tiên
+  const startIdx = s.indexOf('{');
+  const endIdx = s.lastIndexOf('}');
+  if (startIdx < 0 || endIdx < 0) return null;
+  try {
+    return JSON.parse(s.slice(startIdx, endIdx + 1));
+  } catch (e) {
+    return null;
+  }
+}
+
 // ---- AI Auto Reply for a specific thread ----
 async function aiAutoReply(chatJid, state) {
   if (!state) return;
   $aiStatusDot.className = 'ai-dot thinking';
-  $aiStatusText.textContent = '🤖 Trả lời ' + state.name + '...';
+  $aiStatusText.textContent = '🤖 Suy nghĩ cho ' + state.name + '...';
 
   try {
     const systemPrompt = $aiSystemPrompt.value.trim();
@@ -263,68 +506,173 @@ async function aiAutoReply(chatJid, state) {
     const model = $aiModel.value;
     const temperature = parseFloat($aiTemp.value);
     const maxTokens = parseInt($aiMaxTokens.value) || 512;
-    const ctxSize = parseInt($aiContextSize.value) || 10;
+    let ctxSize = parseInt($aiContextSize.value) || 10;
 
-    // Lấy context qua bridge (plaintext!)
-    let context = [];
-    if (state.threadKey) {
-      try {
-        const resp = await rpc('getRecentMessages', { threadKey: state.threadKey, count: ctxSize });
-        if (resp.ok && Array.isArray(resp.result)) {
-          context = resp.result;
-        }
-      } catch (_) {}
-    }
+    if (!state.threadKey) throw new Error('Không biết threadKey');
 
-    // Build messages: đảo role (AI đóng vai tôi)
-    const messages = [];
-    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    const noTools = MODELS_NO_TOOLS.has(model);
+    aiAddLog(`🚀 <b>${state.name}:</b> bắt đầu pipeline (model=<code>${model}</code>, ctx=${ctxSize}, temp=${temperature}${noTools ? ', no-tools mode' : ''})`, { cls: 'event' });
 
-    for (const m of context) {
-      if (!m.text) continue;
-      messages.push({
-        role: m.isMine ? 'assistant' : 'user',
-        content: m.text,
-      });
-    }
-
-    if (!messages.some(m => m.role === 'user')) {
-      messages.push({ role: 'user', content: state.lastMsgFull || 'Hi' });
-    }
-
-    // Call API
-    const resp = await fetch('https://api.deepinfra.com/v1/openai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey,
-      },
-      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens }),
+    // Lấy context ban đầu
+    let context = await fetchContext(state.threadKey, ctxSize);
+    aiAddLog(`📥 <b>${state.name}:</b> load ${context.length}/${ctxSize} tin gốc`, {
+      cls: 'debug',
+      details: context.map(m => formatContextLine(m)).join('\n'),
     });
 
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error('API ' + resp.status + ': ' + err.slice(0, 200));
+    // Build messages + call LLM (có thể có nhiều round nếu LLM gọi tool)
+    let messages = buildLLMMessages(context, systemPrompt, state.lastMsgFull, noTools);
+    aiAddLog(`📤 <b>${state.name}:</b> messages gửi LLM (${messages.length} msg)`, {
+      cls: 'debug',
+      details: messages,
+    });
+
+    let decision = null;
+    let toolRounds = 0;
+    let totalLatency = 0;
+    while (true) {
+      // Round cuối (hết quota tool) → bỏ tools để force LLM trả content
+      const allowTools = toolRounds < MAX_TOOL_ROUNDS;
+      const roundLabel = `Round ${toolRounds + 1}${allowTools ? '' : ' (no-tools, forced answer)'}`;
+      aiAddLog(`🔄 <b>${state.name}:</b> ${roundLabel} — gọi LLM...`, { cls: 'event' });
+
+      const t0 = Date.now();
+      const llmResp = await callLLM({
+        apiKey, model, temperature, maxTokens,
+        messages,
+        tools: allowTools ? AI_TOOLS : null,
+      });
+      const latency = Date.now() - t0;
+      totalLatency += latency;
+
+      const choice = llmResp.choices?.[0];
+      if (!choice) throw new Error('LLM trả về rỗng');
+
+      const usage = llmResp.usage || {};
+      aiAddLog(
+        `📨 <b>${state.name}:</b> ${roundLabel} response (${latency}ms, ` +
+        `prompt=${usage.prompt_tokens || '?'} tok, completion=${usage.completion_tokens || '?'} tok)`,
+        { cls: 'debug', details: choice.message }
+      );
+
+      // Trường hợp 1: LLM gọi tool fetch_more_messages
+      const toolCalls = choice.message?.tool_calls || [];
+      if (toolCalls.length > 0 && allowTools) {
+        // Append assistant message với tool_calls — chỉ giữ fields OpenAI chuẩn
+        messages.push({
+          role: 'assistant',
+          content: choice.message.content || null,
+          tool_calls: choice.message.tool_calls,
+        });
+        // Xử lý từng tool call
+        for (const tc of toolCalls) {
+          if (tc.function?.name === 'fetch_more_messages') {
+            let args = {};
+            try { args = JSON.parse(tc.function.arguments || '{}'); } catch (_) {}
+            // Tôn trọng count của AI, chỉ cap min 10 / max 100
+            const requestedCount = Math.min(MAX_CONTEXT_FETCH, Math.max(10, args.count || 20));
+            ctxSize = requestedCount;
+            aiAddLog(
+              `🔧 <b>${state.name}:</b> tool call <code>fetch_more_messages</code>(count=${requestedCount})`,
+              { cls: 'tool', details: { tool_call_id: tc.id, raw_args: tc.function.arguments, parsed: args } }
+            );
+            context = await fetchContext(state.threadKey, requestedCount);
+            const historyText = context.map(m => formatContextLine(m)).join('\n');
+            // Báo cho LLM biết còn bao nhiêu lần gọi tool còn lại
+            const remaining = MAX_TOOL_ROUNDS - toolRounds - 1;
+            const remainHint = remaining > 0
+              ? `Bạn còn ${remaining} lần gọi tool. Nếu đã đủ context, hãy trả JSON ngay.`
+              : `ĐÂY LÀ LẦN GỌI TOOL CUỐI. Lần tiếp theo bạn BẮT BUỘC trả JSON decision (không gọi tool nữa).`;
+            const toolContent = `Đã load ${context.length} tin nhắn gần nhất (bạn yêu cầu ${requestedCount}):\n\n${historyText}\n\n${remainHint}`;
+            messages.push({
+              role: 'tool',
+              tool_call_id: tc.id,
+              content: toolContent,
+            });
+            $aiStatusText.textContent = `📚 Đọc ${context.length} tin cho ${state.name}...`;
+            aiAddLog(
+              `📚 <b>${state.name}:</b> tool result — ${context.length} tin (còn ${remaining} lần gọi)`,
+              { cls: 'tool', details: historyText }
+            );
+          } else {
+            aiAddLog(
+              `⚠️ <b>${state.name}:</b> tool lạ: <code>${tc.function?.name}</code> — bỏ qua`,
+              { cls: 'err', details: tc }
+            );
+          }
+        }
+        toolRounds++;
+        continue; // Gọi LLM lại với context mở rộng
+      }
+
+      // Trường hợp 2: LLM trả về answer cuối
+      const raw = choice.message?.content || '';
+      aiAddLog(`📝 <b>${state.name}:</b> LLM trả content (raw)`, { cls: 'debug', details: raw });
+
+      decision = parseAiDecision(raw);
+      if (!decision) {
+        aiAddLog(`❌ <b>${state.name}:</b> parse JSON FAIL`, { cls: 'err', details: raw });
+        throw new Error('Không parse được JSON từ LLM: ' + raw.slice(0, 200));
+      }
+      aiAddLog(
+        `✅ <b>${state.name}:</b> parsed decision = <b>${decision.decision}</b>, ` +
+        `${(decision.messages || []).length} tin (tổng ${totalLatency}ms, ${toolRounds} tool round)`,
+        { cls: 'ok', details: decision }
+      );
+      break;
     }
 
-    const data = await resp.json();
-    let aiReply = data.choices?.[0]?.message?.content || '';
-    aiReply = aiReply.replace(/^<think>[\s\S]*?<\/think>\s*/i, '').trim();
-    if (!aiReply) throw new Error('AI trả về rỗng');
+    if (!decision) throw new Error('Không nhận được decision');
 
-    // Gửi Messenger
-    const threadKey = state.threadKey;
-    if (!threadKey) throw new Error('Không biết threadKey');
-
-    const sendResp = await rpc('sendMessage', { text: aiReply, threadKey, chatJid: state.chatJid });
-    if (sendResp.ok && sendResp.result?.success !== false) {
-      aiAddLog(`🤖 → <b>${state.name}:</b> "${aiReply.slice(0, 80)}${aiReply.length > 80 ? '...' : ''}"`);
-      logLine(`AI → ${state.name}: "${aiReply.slice(0, 60)}"`, 'ok');
-    } else {
-      throw new Error('Gửi thất bại: ' + (sendResp.error || 'unknown'));
+    // Xử lý decision
+    if (decision.decision === 'no_reply') {
+      aiAddLog(
+        `⏭️ <b>${state.name}:</b> AI quyết định KHÔNG reply — <i>${decision.reason || '(không lý do)'}</i>`,
+        { cls: 'event', details: decision }
+      );
+      logLine(`AI no-reply ${state.name}: ${decision.reason}`, 'info');
+      return;
     }
+
+    if (decision.decision !== 'reply' || !Array.isArray(decision.messages) || decision.messages.length === 0) {
+      throw new Error('Decision không hợp lệ: ' + JSON.stringify(decision));
+    }
+
+    // Gửi từng tin với delay 1-3s
+    const msgs = decision.messages.slice(0, 3); // cap 3 tin
+    aiAddLog(`📨 <b>${state.name}:</b> bắt đầu gửi ${msgs.length} tin`, { cls: 'event' });
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i].trim();
+      if (!m) continue;
+      // Nhúng stego signature "AI" vào mỗi tin
+      const wrapped = await Stego.encode(m, AI_SIGNATURE, null);
+      const sendResp = await rpc('sendMessage', {
+        text: wrapped, threadKey: state.threadKey, chatJid: state.chatJid,
+      });
+      if (!(sendResp.ok && sendResp.result?.success !== false)) {
+        aiAddLog(
+          `❌ <b>${state.name}:</b> send tin ${i + 1} FAIL`,
+          { cls: 'err', details: sendResp }
+        );
+        throw new Error('Gửi tin ' + (i + 1) + ' thất bại: ' + (sendResp.error || 'unknown'));
+      }
+      const preview = m.slice(0, 60) + (m.length > 60 ? '...' : '');
+      aiAddLog(
+        `🤖 → <b>${state.name}</b> [${i + 1}/${msgs.length}]: "${preview}"`,
+        { cls: 'ok', details: { full_text: m, stego_signature: AI_SIGNATURE, wrapped_length: wrapped.length } }
+      );
+      logLine(`AI ${i + 1}/${msgs.length} → ${state.name}: "${preview}"`, 'ok');
+      // Delay random 1-3s giữa các tin (trừ tin cuối)
+      if (i < msgs.length - 1) {
+        const delay = Math.round(1000 + Math.random() * 2000);
+        $aiStatusText.textContent = `💭 Đang gõ... (${i + 1}/${msgs.length})`;
+        aiAddLog(`⏳ <b>${state.name}:</b> chờ ${delay}ms trước tin tiếp theo`, { cls: 'debug' });
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+    aiAddLog(`🏁 <b>${state.name}:</b> hoàn tất pipeline`, { cls: 'event' });
   } catch (e) {
-    aiAddLog(`❌ <b>${state.name}:</b> ${e.message}`);
+    aiAddLog(`❌ <b>${state.name}:</b> ${e.message}`, { cls: 'err', details: e.stack || String(e) });
     logLine('AI error: ' + e.message, 'err');
   } finally {
     aiThreads.delete(chatJid);
@@ -337,14 +685,48 @@ async function aiAutoReply(chatJid, state) {
 }
 
 // ---- Log ----
-function aiAddLog(html) {
+function aiAddLog(html, opts) {
   const ts = new Date().toTimeString().slice(0, 8);
   const div = document.createElement('div');
   div.className = 'ai-log-line';
-  div.innerHTML = `<span class="ai-log-ts">[${ts}]</span> ${html}`;
+  if (opts && opts.cls) div.className += ' ' + opts.cls;
+
+  let body = `<span class="ai-log-ts">[${ts}]</span> ${html}`;
+
+  // Nếu có details (JSON / payload dài) → render collapse
+  if (opts && opts.details != null) {
+    let detailsStr;
+    if (typeof opts.details === 'string') {
+      detailsStr = opts.details;
+    } else {
+      try { detailsStr = JSON.stringify(opts.details, null, 2); }
+      catch (_) { detailsStr = String(opts.details); }
+    }
+    // Escape HTML
+    detailsStr = detailsStr
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    body += ` <span class="ai-log-collapse" data-state="collapsed">[xem chi tiết ▼]</span>` +
+            `<div class="ai-log-details collapsed">${detailsStr}</div>`;
+  }
+
+  div.innerHTML = body;
   $aiLog.appendChild(div);
   $aiLog.scrollTop = $aiLog.scrollHeight;
-  if ($aiLog.children.length > 200) $aiLog.removeChild($aiLog.firstChild);
+  if ($aiLog.children.length > 500) $aiLog.removeChild($aiLog.firstChild);
+
+  // Wire collapse toggle
+  const toggle = div.querySelector('.ai-log-collapse');
+  const details = div.querySelector('.ai-log-details');
+  if (toggle && details) {
+    toggle.addEventListener('click', () => {
+      const collapsed = details.classList.toggle('collapsed');
+      toggle.textContent = collapsed ? '[xem chi tiết ▼]' : '[thu gọn ▲]';
+      if (!collapsed) {
+        // Khi mở, đảm bảo log scroll xuống để thấy
+        $aiLog.scrollTop = div.offsetTop + div.offsetHeight - $aiLog.clientHeight;
+      }
+    });
+  }
 }
 
 // ---- Save/load settings ----

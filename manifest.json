@@ -29,6 +29,11 @@
       "matches": ["https://www.facebook.com/*", "https://*.facebook.com/*"],
       "js": ["content_script.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.facebook.com/*", "https://*.facebook.com/*"],
+      "js": ["stego_overlay.js"],
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {

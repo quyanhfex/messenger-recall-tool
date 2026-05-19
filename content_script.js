@@ -30,8 +30,19 @@ window.addEventListener('message', (event) => {
 // Action có thể chạy lâu (multi-batch, multi-revoke) → cho timeout dài hơn
 const LONG_ACTIONS = new Set(['loadOlderMessages', 'revokeMany', 'autoCollectPlaintext']);
 
+// Actions xử lý local trong content script (không cần đi qua injector)
+const LOCAL_ACTIONS = new Set(['stegoRescan']);
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.target !== 'page') return;
+
+  // Local action: dispatch event để stego_overlay.js (cùng context) xử lý
+  if (msg.request && LOCAL_ACTIONS.has(msg.request.action)) {
+    window.dispatchEvent(new CustomEvent('mr-local-action', { detail: msg.request }));
+    sendResponse({ ok: true });
+    return;
+  }
+
   const rpcId = Math.random().toString(36).slice(2);
   pendingRpc.set(rpcId, sendResponse);
   window.postMessage({ source: 'mr-panel-relay', rpcId, request: msg.request }, '*');
