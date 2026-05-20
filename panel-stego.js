@@ -23,6 +23,7 @@
   $menuBtn.addEventListener('click', () => {
     const open = $settingsPanel.classList.toggle('open');
     $menuBtn.classList.toggle('active', open);
+    $menuBtn.setAttribute('aria-expanded', open.toString());
   });
 
   // ---- Load/save khoá mặc định ----

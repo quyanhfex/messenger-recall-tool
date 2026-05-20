@@ -890,6 +890,8 @@
 
   function hideComposerPopup() {
     composerPopup.classList.remove('show');
+    const btn = document.getElementById(COMPOSER_BTN_ID);
+    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
 
   $cpOk.addEventListener('click', () => {
