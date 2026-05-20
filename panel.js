@@ -1524,10 +1524,15 @@ async function buildThreadDropdown() {
 }
 
 function switchToTab(tabName) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   el(tabName + '-panel').classList.add('active');
-  document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
+  const activeBtn = document.querySelector('[data-tab="' + tabName + '"]');
+  activeBtn.classList.add('active');
+  activeBtn.setAttribute('aria-selected', 'true');
 }
 
 function chatAddBubble(text, isMine, senderName, ts, state) {
