@@ -688,42 +688,42 @@
 <div id="banner"></div>
 
 <!-- Header -->
-<div id="header">
-  <div id="status-line">
-    <span class="status-dot" id="status-dot"></span>
+<header id="header">
+  <div id="status-line" aria-live="polite" aria-atomic="true">
+    <span class="status-dot" id="status-dot" aria-hidden="true"></span>
     <span id="status-text">Đang khởi động...</span>
   </div>
   <div id="thread-info">—</div>
   <div id="user-info">
     <span id="user-info-text">ID người dùng: —</span>
-    <button id="btn-header-refresh" title="Tải lại dữ liệu">🔄 Tải lại</button>
+    <button id="btn-header-refresh" title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu">🔄 Tải lại</button>
   </div>
-</div>
+</header>
 
 <!-- Tabs -->
-<div id="tabs">
-  <button class="tab-btn active" data-tab="load">📥 Tải</button>
+<nav id="tabs" role="tablist" aria-label="Các công cụ của Messenger Recall">
+  <button class="tab-btn active" data-tab="load" role="tab" aria-selected="true" aria-controls="load-panel" id="tab-load">📥 Tải</button>
   <div class="tab-wrap" id="view-tab-wrap">
-    <button class="tab-btn" data-tab="view">💬 Xem</button>
-    <div class="tab-dropdown" id="view-thread-dropdown">
+    <button class="tab-btn" data-tab="view" role="tab" aria-selected="false" aria-controls="view-panel" id="tab-view">💬 Xem</button>
+    <div class="tab-dropdown" id="view-thread-dropdown" aria-hidden="true">
       <div class="thread-dropdown-empty">Hover để chọn thread</div>
     </div>
   </div>
-  <button class="tab-btn" data-tab="revoke">🗑 Thu hồi</button>
-  <button class="tab-btn" data-tab="export">📤 Xuất</button>
+  <button class="tab-btn" data-tab="revoke" role="tab" aria-selected="false" aria-controls="revoke-panel" id="tab-revoke">🗑 Thu hồi</button>
+  <button class="tab-btn" data-tab="export" role="tab" aria-selected="false" aria-controls="export-panel" id="tab-export">📤 Xuất</button>
   <div class="tab-wrap" id="chat-tab-wrap">
-    <button class="tab-btn" data-tab="chat">✉ Chat</button>
-    <div class="tab-dropdown" id="chat-thread-dropdown">
+    <button class="tab-btn" data-tab="chat" role="tab" aria-selected="false" aria-controls="chat-panel" id="tab-chat">✉ Chat</button>
+    <div class="tab-dropdown" id="chat-thread-dropdown" aria-hidden="true">
       <div class="thread-dropdown-empty">Hover để chọn thread</div>
     </div>
   </div>
-  <button class="tab-btn" data-tab="ai">🤖 AI</button>
-</div>
+  <button class="tab-btn" data-tab="ai" role="tab" aria-selected="false" aria-controls="ai-panel" id="tab-ai">🤖 AI</button>
+</nav>
 
-<div id="tab-panels">
+<main id="tab-panels">
 
   <!-- Tab: Tải -->
-  <div class="tab-panel active" id="load-panel">
+  <div class="tab-panel active" id="load-panel" role="tabpanel" aria-labelledby="tab-load">
     <div class="section-body" id="load-section">
       <div class="lo-grid">
         <div class="lo-field">
