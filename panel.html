@@ -727,26 +727,26 @@
     <div class="section-body" id="load-section">
       <div class="lo-grid">
         <div class="lo-field">
-          <label>Tải đến ngày</label>
+          <label for="lo-from">Tải đến ngày</label>
           <input type="date" id="lo-from" />
         </div>
         <div class="lo-field">
-          <label>Mỗi lượt (tin)</label>
+          <label for="lo-size">Mỗi lượt (tin)</label>
           <input type="number" id="lo-size" value="50" min="5" max="200" step="5" />
         </div>
         <div class="lo-field">
-          <label>Nghỉ giữa lượt (ms)</label>
+          <label for="lo-delay">Nghỉ giữa lượt (ms)</label>
           <input type="number" id="lo-delay" value="200" min="0" max="5000" step="50" />
         </div>
       </div>
       <div class="row">
         <button id="lo-start" class="primary">🔽 Bắt đầu tải</button>
         <button id="lo-stop" disabled>⏹ Dừng</button>
-        <button id="btn-refresh" class="ghost">🔄 Tải lại</button>
-        <button id="btn-clear-extra" class="ghost">🗑 Xoá đã tải</button>
+        <button id="btn-refresh" class="ghost" aria-label="Tải lại tất cả dữ liệu">🔄 Tải lại</button>
+        <button id="btn-clear-extra" class="ghost" aria-label="Xoá dữ liệu đã tải thêm">🗑 Xoá đã tải</button>
       </div>
-      <div class="progress"><div class="progress-bar" id="lo-bar"></div></div>
-      <div class="lo-status">
+      <div class="progress" aria-hidden="true"><div class="progress-bar" id="lo-bar"></div></div>
+      <div class="lo-status" aria-live="polite">
         Trạng thái: <b id="lo-state">Sẵn sàng</b><br>
         Lượt: <b id="lo-batch">0</b> · Đã tải thêm: <b id="lo-count">0</b> · Tin cũ nhất: <b id="lo-oldest">—</b>
       </div>
@@ -754,26 +754,26 @@
   </div>
 
   <!-- Tab: Xem -->
-  <div class="tab-panel" id="view-panel">
+  <div class="tab-panel" id="view-panel" role="tabpanel" aria-labelledby="tab-view">
     <div id="search-bar">
-      <input type="text" id="f-search" placeholder="🔍 Tìm trong nội dung tin nhắn..." />
-      <button id="btn-view-refresh" title="Tải lại" style="background:transparent;border:1px solid transparent;border-radius:4px;color:#6e7681;cursor:pointer;font-size:14px;padding:3px 5px;flex-shrink:0;transition:color 0.15s,background 0.15s;">↻</button>
-      <button id="btn-filter" title="Bộ lọc">⚙</button>
+      <input type="text" id="f-search" placeholder="🔍 Tìm trong nội dung tin nhắn..." aria-label="Tìm trong nội dung tin nhắn" />
+      <button id="btn-view-refresh" title="Tải lại" aria-label="Tải lại danh sách" style="background:transparent;border:1px solid transparent;border-radius:4px;color:#6e7681;cursor:pointer;font-size:14px;padding:3px 5px;flex-shrink:0;transition:color 0.15s,background 0.15s;">↻</button>
+      <button id="btn-filter" title="Bộ lọc" aria-label="Mở bộ lọc" aria-expanded="false" aria-controls="filter-dropdown">⚙</button>
     </div>
-    <div id="filter-dropdown">
+    <div id="filter-dropdown" aria-label="Tùy chọn bộ lọc">
       <div id="filter-row">
-        <label><input type="checkbox" id="f-onlymine" /> Chỉ của tôi</label>
-        <label><input type="checkbox" id="f-hideunsent" checked /> Ẩn đã thu hồi</label>
-        <label><input type="checkbox" id="f-hideadmin" checked /> Ẩn hệ thống</label>
+        <label for="f-onlymine"><input type="checkbox" id="f-onlymine" /> Chỉ của tôi</label>
+        <label for="f-hideunsent"><input type="checkbox" id="f-hideunsent" checked /> Ẩn đã thu hồi</label>
+        <label for="f-hideadmin"><input type="checkbox" id="f-hideadmin" checked /> Ẩn hệ thống</label>
       </div>
       <div id="date-row">
-        <label>Từ: <input type="date" id="f-from" /></label>
-        <label>Đến: <input type="date" id="f-to" /></label>
+        <label for="f-from">Từ: <input type="date" id="f-from" /></label>
+        <label for="f-to">Đến: <input type="date" id="f-to" /></label>
       </div>
     </div>
     <div id="list-header">
-      <input type="checkbox" id="check-all" title="Chọn tất cả" />
-      <div id="sort-time" style="cursor:pointer; user-select:none;" title="Đổi thứ tự sắp xếp">Giờ ↓</div>
+      <input type="checkbox" id="check-all" title="Chọn tất cả" aria-label="Chọn tất cả tin nhắn" />
+      <div id="sort-time" style="cursor:pointer; user-select:none;" title="Đổi thứ tự sắp xếp" tabindex="0" role="button">Giờ ↓</div>
       <div>Người gửi</div>
       <div>Nội dung</div>
       <div style="text-align:right;">Loại</div>
@@ -791,18 +791,18 @@
   </div>
 
   <!-- Tab: Thu hồi -->
-  <div class="tab-panel" id="revoke-panel">
+  <div class="tab-panel" id="revoke-panel" role="tabpanel" aria-labelledby="tab-revoke">
     <div class="section-body">
       <div class="rv-info">
         Tổng: <b id="rv-sum-total">—</b> · Của tôi: <b id="rv-sum-mine">—</b> · Đã chọn: <b id="rv-sum-sel">—</b>
       </div>
       <div class="row" style="margin-bottom:8px;">
-        <label style="font-size:11px; color:#8b949e;">Nghỉ giữa các lần (ms):</label>
+        <label for="dlmin" style="font-size:11px; color:#8b949e;">Nghỉ giữa các lần (ms):</label>
         <input type="number" id="dlmin" value="1000" min="0" max="60000" step="100" style="width:65px;" />
         <span style="color:#6e7681;">–</span>
-        <input type="number" id="dlmax" value="1500" min="0" max="60000" step="100" style="width:65px;" />
+        <input type="number" id="dlmax" aria-label="Nghỉ tối đa" value="1500" min="0" max="60000" step="100" style="width:65px;" />
       </div>
-      <div class="progress" style="display:none;" id="rv-progress"><div class="progress-bar danger" id="rv-bar"></div></div>
+      <div class="progress" style="display:none;" id="rv-progress" aria-hidden="true"><div class="progress-bar danger" id="rv-bar"></div></div>
       <div class="row">
         <button id="btn-rv-sel" class="danger" disabled>🗑 Thu hồi đã chọn</button>
         <button id="btn-rv-range" class="danger" disabled title="Thu hồi từ tin đầu đến tin cuối đã chọn">🗑 Thu hồi 1 đoạn</button>
@@ -813,7 +813,7 @@
   </div>
 
   <!-- Tab: Xuất -->
-  <div class="tab-panel" id="export-panel">
+  <div class="tab-panel" id="export-panel" role="tabpanel" aria-labelledby="tab-export">
     <div class="section-body">
       <div class="export-card">
         <h3>📄 Xuất PDF</h3>
@@ -834,110 +834,112 @@
   </div>
 
   <!-- Tab: Chat -->
-  <div class="tab-panel" id="chat-panel">
+  <div class="tab-panel" id="chat-panel" role="tabpanel" aria-labelledby="tab-chat">
     <div id="chat-peer-bar">
       <span>Đang nhắn với:</span>
       <span class="peer-name" id="chat-peer-name">—</span>
       <span class="peer-id" id="chat-peer-id"></span>
-      <button id="btn-chat-refresh" style="margin-left:auto; font-size:10px; padding:3px 7px;">↻</button>
-      <button id="stego-menu-btn" title="Cài đặt khoá mặc định" style="font-size:11px; padding:3px 7px;">⚙</button>
+      <button id="btn-chat-refresh" aria-label="Tải lại tên người nhận" style="margin-left:auto; font-size:10px; padding:3px 7px;">↻</button>
+      <button id="stego-menu-btn" title="Cài đặt khoá mặc định" aria-label="Cài đặt khoá mặc định cho tin nhắn ẩn" aria-expanded="false" aria-controls="stego-settings-panel" style="font-size:11px; padding:3px 7px;">⚙</button>
     </div>
 
     <!-- Settings panel — mật khẩu mặc định (xổ ra khi bấm ⚙) -->
-    <div id="stego-settings-panel">
+    <div id="stego-settings-panel" aria-label="Cài đặt khoá tin nhắn ẩn">
       <div>
-        <label>Khoá mặc định</label>
+        <label for="stego-default-pw">Khoá mặc định</label>
         <div class="ai-apikey-wrap">
           <input type="password" id="stego-default-pw" placeholder="Nhập khoá hay dùng..." />
-          <button type="button" class="ai-apikey-eye" id="stego-default-pw-eye" title="Hiện / ẩn">👁</button>
+          <button type="button" class="ai-apikey-eye" id="stego-default-pw-eye" aria-label="Hiện hoặc ẩn mật khẩu" title="Hiện / ẩn">👁</button>
         </div>
       </div>
       <div class="stego-row">
         <button class="primary" id="stego-save-settings">💾 Lưu</button>
-        <span id="stego-save-status" style="font-size:10.5px;color:#6e7681;align-self:center;"></span>
+        <span id="stego-save-status" aria-live="polite" style="font-size:10.5px;color:#6e7681;align-self:center;"></span>
       </div>
     </div>
 
-    <div id="chat-messages"></div>
+    <div id="chat-messages" aria-live="polite"></div>
     <div id="chat-input-bar">
-      <textarea id="chat-input" rows="1" placeholder="Nhập tin nhắn..."></textarea>
+      <textarea id="chat-input" rows="1" aria-label="Nhập nội dung tin nhắn" placeholder="Nhập tin nhắn..."></textarea>
       <button id="chat-send" disabled>Gửi</button>
       <!-- Icon 🔒 nổi lên khi hover nút Gửi -->
-      <div id="stego-hover-icon" title="Soạn tin ẩn">🔒</div>
+      <div id="stego-hover-icon" title="Soạn tin ẩn" role="button" aria-label="Soạn tin nhắn tàng hình">🔒</div>
     </div>
 
     <!-- Popup tin ẩn (nổi khi click 🔒) -->
-    <div id="stego-compose-popup">
+    <div id="stego-compose-popup" role="dialog" aria-label="Soạn tin nhắn ẩn">
       <div style="font-size:11px;font-weight:600;color:#c4b5fd;margin-bottom:8px;">🔒 Soạn tin ẩn</div>
+      <label for="stego-hidden" class="sr-only" style="display:none;">Nội dung tin nhắn tàng hình</label>
       <textarea id="stego-hidden" rows="2" placeholder="Nội dung sẽ nhúng vào tin gửi đi..."></textarea>
+      <label for="stego-password" class="sr-only" style="display:none;">Mật khẩu mã hóa</label>
       <input type="password" id="stego-password" placeholder="Khoá (để trống = dùng khoá mặc định)" style="margin-top:6px;" />
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button class="primary" id="stego-compose-ok">OK</button>
         <button id="stego-compose-clear">Xoá tin ẩn</button>
       </div>
-      <div id="stego-compose-status" style="font-size:10.5px;color:#6e7681;margin-top:6px;"></div>
+      <div id="stego-compose-status" aria-live="polite" style="font-size:10.5px;color:#6e7681;margin-top:6px;"></div>
     </div>
   </div>
 
   <!-- Tab: AI Auto-Reply -->
-  <div class="tab-panel" id="ai-panel">
+  <div class="tab-panel" id="ai-panel" role="tabpanel" aria-labelledby="tab-ai">
     <!-- Hero: 1 hàng duy nhất -->
     <div class="ai-hero">
-      <button id="ai-toggle" class="ai-toggle-btn">▶ <span id="ai-toggle-label">BẬT</span></button>
-      <span class="ai-status">
-        <span class="ai-dot off" id="ai-status-dot"></span>
+      <button id="ai-toggle" class="ai-toggle-btn" aria-label="Bật tắt tính năng AI tự động trả lời">▶ <span id="ai-toggle-label">BẬT</span></button>
+      <span class="ai-status" aria-live="polite">
+        <span class="ai-dot off" id="ai-status-dot" aria-hidden="true"></span>
         <span id="ai-status-text">Không hoạt động</span>
       </span>
     </div>
 
     <!-- Action row: chỉ 2 nút thu gọn -->
     <div class="ai-actions">
-      <button class="ai-icon-btn" id="ai-toggle-settings">⚙ Cài đặt</button>
-      <button class="ai-icon-btn" id="ai-toggle-log">
+      <button class="ai-icon-btn" id="ai-toggle-settings" aria-expanded="false" aria-controls="ai-settings">⚙ Cài đặt</button>
+      <button class="ai-icon-btn" id="ai-toggle-log" aria-expanded="false" aria-controls="ai-log">
         ☰ Nhật ký
       </button>
-      <span style="margin-left:auto;font-size:11px;color:#6e7681;align-self:center;">
+      <span aria-live="polite" style="margin-left:auto;font-size:11px;color:#6e7681;align-self:center;">
         <span id="ai-active-count">0</span> đang chờ
       </span>
     </div>
 
     <!-- Settings (ẩn mặc định) -->
-    <div id="ai-settings">
+    <div id="ai-settings" aria-label="Cài đặt AI">
       <div class="ai-field">
-        <label>System prompt</label>
+        <label for="ai-system-prompt">System prompt</label>
         <textarea id="ai-system-prompt" rows="3">Bạn là tôi, hãy trả lời tin nhắn thay tôi. Trả lời ngắn gọn, tự nhiên, thân thiện như đang nhắn tin với bạn bè. Dùng tiếng Việt. Không cần giải thích dài dòng.</textarea>
       </div>
       <div class="ai-field">
-        <label>API key</label>
+        <label for="ai-api-key">API key</label>
         <div class="ai-apikey-wrap">
           <input type="password" id="ai-api-key" value="" placeholder="sk-..." />
-          <button type="button" class="ai-apikey-eye" id="ai-apikey-eye" title="Hiện / ẩn">👁</button>
+          <button type="button" class="ai-apikey-eye" id="ai-apikey-eye" aria-label="Hiện hoặc ẩn API key" title="Hiện / ẩn">👁</button>
         </div>
       </div>
       <div class="ai-grid-2">
         <div class="ai-field">
-          <label>Model</label>
+          <label for="ai-model">Model</label>
           <select id="ai-model"></select>
         </div>
         <div class="ai-field">
-          <label>Max tokens</label>
+          <label for="ai-max-tokens">Max tokens</label>
           <input type="number" id="ai-max-tokens" value="512" min="50" max="4096" step="50" />
         </div>
       </div>
       <div class="ai-field">
-        <label>Temperature</label>
+        <label for="ai-temp">Temperature</label>
         <div class="ai-temp-row">
           <input type="range" id="ai-temp" min="0" max="2" step="0.1" value="0.7" />
-          <span class="ai-temp-val" id="ai-temp-val">0.7</span>
+          <span class="ai-temp-val" id="ai-temp-val" aria-hidden="true">0.7</span>
         </div>
       </div>
       <div class="ai-grid-2">
         <div class="ai-field">
-          <label>Thời gian chờ (giây)</label>
+          <label for="ai-delay">Thời gian chờ (giây)</label>
           <input type="number" id="ai-delay" value="30" min="5" max="300" step="5" />
         </div>
         <div class="ai-field">
-          <label>Context (tin ban đầu, AI có thể fetch thêm tối đa 100)</label>
+          <label for="ai-context-size">Context (tin ban đầu, AI có thể fetch thêm tối đa 100)</label>
           <input type="number" id="ai-context-size" value="10" min="3" max="100" step="1" />
         </div>
       </div>
@@ -945,51 +947,51 @@
 
     <!-- Body: active list mặc định, log toggle -->
     <div class="ai-body">
-      <div id="ai-active-list"></div>
-      <div id="ai-log"></div>
+      <div id="ai-active-list" aria-live="polite"></div>
+      <div id="ai-log" aria-live="polite"></div>
     </div>
   </div>
 
-</div>
+</main>
 
 <!-- Log toggle -->
-<div id="log-toggle">
-  <span class="arrow">▲</span>
+<div id="log-toggle" role="button" aria-expanded="false" aria-controls="log" tabindex="0">
+  <span class="arrow" aria-hidden="true">▲</span>
   <span id="log-label">Log</span>
 </div>
-<div id="log"></div>
+<div id="log" aria-live="polite"></div>
 
 <!-- Media modal -->
-<div id="modal-bg">
+<div id="modal-bg" role="dialog" aria-modal="true" aria-labelledby="modal-loading">
   <div class="modal-loading" id="modal-loading">Đang tải ảnh...</div>
-  <img id="modal-img" style="display:none" alt="" />
-  <div class="modal-info" id="modal-info"></div>
+  <img id="modal-img" style="display:none" alt="Ảnh được đính kèm trong tin nhắn" />
+  <div class="modal-info" id="modal-info" aria-live="polite"></div>
   <div class="modal-actions">
     <button id="modal-download" class="primary" disabled>💾 Tải về</button>
-    <button id="modal-close">✕ Đóng</button>
+    <button id="modal-close" aria-label="Đóng cửa sổ xem ảnh">✕ Đóng</button>
   </div>
 </div>
 
 <!-- Stats modal -->
-<div id="stats-bg">
+<div id="stats-bg" role="dialog" aria-modal="true" aria-label="Thống kê cuộc trò chuyện">
   <div id="stats-box">
-    <button class="close-btn" id="stats-close">✕</button>
+    <button class="close-btn" id="stats-close" aria-label="Đóng bảng thống kê">✕</button>
     <h2>📊 Thống kê thread</h2>
-    <div id="stats-content"></div>
+    <div id="stats-content" aria-live="polite"></div>
   </div>
 </div>
 
 <!-- Stego decode modal -->
-<div id="stego-modal-bg">
+<div id="stego-modal-bg" role="dialog" aria-modal="true" aria-labelledby="stego-modal-title">
   <div id="stego-modal">
     <h3 id="stego-modal-title">🔒 Giải mã tin ẩn</h3>
     <div id="stego-modal-password-wrap">
-      <label>Mật khẩu (nếu tin được mã hoá)</label>
+      <label for="stego-modal-password">Mật khẩu (nếu tin được mã hoá)</label>
       <input type="password" id="stego-modal-password" placeholder="Để trống nếu không có" />
     </div>
     <div>
-      <label>Nội dung tin ẩn</label>
-      <div class="stego-modal-result" id="stego-modal-result"></div>
+      <div style="font-size: 10px; color: #6e7681; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;" id="stego-modal-result-label">Nội dung tin ẩn</div>
+      <div class="stego-modal-result" id="stego-modal-result" aria-live="polite" aria-labelledby="stego-modal-result-label"></div>
     </div>
     <div class="stego-modal-actions">
       <button id="stego-modal-decode" class="primary">🔓 Giải mã</button>
