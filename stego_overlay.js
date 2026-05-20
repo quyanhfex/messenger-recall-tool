@@ -827,9 +827,14 @@
   // Popup compose
   const composerPopup = document.createElement('div');
   composerPopup.id = 'mr-stego-composer-popup';
+  composerPopup.setAttribute('role', 'dialog');
+  composerPopup.setAttribute('aria-modal', 'true');
+  composerPopup.setAttribute('aria-label', 'Soạn tin ẩn');
   composerPopup.innerHTML = `
     <h4>🔒 Soạn tin ẩn</h4>
+    <label for="mr-stego-cp-hidden" class="sr-only" style="display:none;">Nội dung tin nhắn tàng hình</label>
     <textarea id="mr-stego-cp-hidden" placeholder="Nội dung sẽ nhúng vào tin gửi đi..."></textarea>
+    <label for="mr-stego-cp-pw" class="sr-only" style="display:none;">Mật khẩu mã hóa</label>
     <input type="password" id="mr-stego-cp-pw" placeholder="Khoá (trống = dùng khoá mặc định)" />
     <div class="mr-cp-actions">
       <button id="mr-stego-cp-clear">Xoá</button>
@@ -933,7 +938,10 @@
     const btn = document.createElement('div');
     btn.id = COMPOSER_BTN_ID;
     btn.setAttribute('role', 'button');
-    btn.setAttribute('aria-label', 'Soạn tin ẩn (Stego)');
+    btn.setAttribute('aria-label', 'Soạn tin nhắn tàng hình');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', 'mr-stego-composer-popup');
+    btn.setAttribute('tabindex', '0');
     btn.title = 'Soạn tin ẩn — nội dung sẽ nhúng vào tin gửi đi';
     btn.innerHTML = `
       <svg viewBox="0 0 24 24" width="20" height="20" style="display:block;">
@@ -941,13 +949,21 @@
           d="M12 1a5 5 0 0 0-5 5v3H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 1 1 6 0v3H9zm3 5a1.5 1.5 0 0 1 1 2.6V19a1 1 0 0 1-2 0v-2.4a1.5 1.5 0 0 1 1-2.6z"/>
       </svg>
     `;
-    btn.addEventListener('click', (e) => {
+    const toggleComposer = (e) => {
       e.stopPropagation();
       e.preventDefault();
       if (composerPopup.classList.contains('show')) {
         hideComposerPopup();
+        btn.setAttribute('aria-expanded', 'false');
       } else {
         showComposerPopup(btn);
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    };
+    btn.addEventListener('click', toggleComposer);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        toggleComposer(e);
       }
     });
 
